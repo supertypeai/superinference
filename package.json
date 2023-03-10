@@ -1,0 +1,28 @@
+{
+  "name": "superinference",
+  "version": "1.0.0",
+  "description": "Infer from any body of text from supported endpoints, turn them into meaningful analysis-ready data with tagging, NER, key attributes, likes, counts, text summarization and whatever the community come up with.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supertypeai/superinference.git"
+  },
+  "keywords": [
+    "inference",
+    "tagging",
+    "NER",
+    "text",
+    "summarization",
+    "NLP"
+  ],
+  "author": "Supertype.ai",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/supertypeai/superinference/issues"
+  },
+  "homepage": "https://github.com/supertypeai/superinference#readme"
+}
