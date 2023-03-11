@@ -1,0 +1,1 @@
+export { default as inferFromDevto } from "./inferFromDevto.js";

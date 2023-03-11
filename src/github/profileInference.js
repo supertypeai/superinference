@@ -1,6 +1,6 @@
-import apiLinks from "../apiLinks.js";
+import endpoints from "../endpoints.json"
 
-const githubLink = apiLinks["github"];
+const githubLink = endpoints["github"];
 
 const profileInference = async (githubHandle) => {
   const response = await fetch(`${githubLink}/users/${githubHandle}`);
