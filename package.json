@@ -1,12 +1,16 @@
 {
   "name": "superinference",
-  "version": "1.0.0",
-  "description": "Infer from any body of text from supported endpoints, turn them into meaningful analysis-ready data with tagging, NER, key attributes, likes, counts, text summarization and whatever the community come up with.",
-  "main": "index.js",
+  "version": "0.1.1",
+  "description": "Swiss army knife for inferring analysis-ready attributes from API endpoints and returning them as JSON objects",
+  "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rollup -c",
+    "start": "rollup -c -w"
   },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/supertypeai/superinference.git"
@@ -17,12 +21,23 @@
     "NER",
     "text",
     "summarization",
-    "NLP"
+    "NLP",
+    "github"
   ],
-  "author": "Supertype.ai",
+  "contributors": [
+    "Aurellia Christie <aurellia@supertype.ai> (https: //github.com/AurelliaChristie)",
+    "onlyphantom <samuel.c@outlook.com> (https: //github.com/onlyphantom)"
+  ],
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/supertypeai/superinference/issues"
+  "homepage": "https://github.com/supertypeai/superinference",
+  "bugs": "https://github.com/supertypeai/superinference/issues",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.1",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-terser": "^0.4.0",
+    "rollup": "^3.19.1"
   },
-  "homepage": "https://github.com/supertypeai/superinference#readme"
+  "dependencies": {
+    "@rollup/plugin-json": "^6.0.0"
+  }
 }
