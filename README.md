@@ -38,15 +38,21 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 ```js
 import { inferFromDevto, inferFromGithub } from "superinference";
 
-
-const { profile, stats } = inferFromGithub("onlyphantom").then((data) => {
+// using then
+let profile, stats, bio;
+inferFromGithub("onlyphantom").then((data) => {
     // do something with the data, such as setting states or updating UI
-  return data
+    ({ profile, stats } = data);
 });
     
-const bio = inferFromDevto("onlyphantom").then((data) => {
-    return data
+inferFromDevto("onlyphantom").then((data) => {
+    bio = data;
 })
+
+// using await
+let { profile, stats } = await inferFromGithub("onlyphantom");
+
+let bio = await inferFromDevto("onlyphantom");
 ```
 
 Here is the sample result for each of `profile`, `stats` and `bio` created from the two function calls above:
@@ -54,12 +60,18 @@ Here is the sample result for each of `profile`, `stats` and `bio` created from 
 ```js
 // profile
 {
-    "login": "onlyphantom",
-    "name": "Samuel Chan",
-    "avatar_url": "https://avatars.githubusercontent.com/u/16984453?v=4",
-    "bio": "Work: @teamalgoritma, @supertypeai Subscribe for content: https://www.youtube.com/c/samuelchan",
-    "followers": 432,
-    "following": 26
+  login: 'onlyphantom',
+  name: 'Samuel Chan',
+  company: '@teamalgoritma @supertypeai',
+  blog: 'https://www.youtube.com/c/samuelchan',
+  location: 'Indonesia',
+  email: null,
+  hireable: true,
+  twitter_username: null,
+  avatar_url: 'https://avatars.githubusercontent.com/u/16984453?v=4',
+  bio: 'Work: @teamalgoritma, @supertypeai Subscribe for content: https://www.youtube.com/c/samuelchan',
+  followers: 432,
+  following: 26
 }
 
 // stats
