@@ -1,4 +1,4 @@
-[![Supertype](https://img.shields.io/badge/supertype.ai-incubate-b1976b)](https://supertype.ai/incubate)
+[![Supertype](https://img.shields.io/badge/supertype.ai-incubate-b1976b)](https://supertype.ai/incubate) &nbsp; &nbsp; ![npm](https://img.shields.io/npm/v/superinference) &nbsp; &nbsp; ![github | superinference](https://img.shields.io/github/package-json/v/supertypeai/superinference) &nbsp; &nbsp; ![license](https://img.shields.io/npm/l/superinference) 
 
 ## Superinference
 
@@ -41,11 +41,11 @@ import { inferFromDevto, inferFromGithub } from "superinference";
 
 const { profile, stats } = inferFromGithub("onlyphantom").then((data) => {
     // do something with the data, such as setting states or updating UI
-  console.log(data);
+  return data
 });
-
+    
 const bio = inferFromDevto("onlyphantom").then((data) => {
-    console.log(data)
+    return data
 })
 ```
 
