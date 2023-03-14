@@ -1,101 +1,68 @@
-import endpoints from "../endpoints.json"
+import endpoints from "../endpoints.json";
 
-const githubLink = "https://api.github.com";
+const githubLink = endpoints["github"];
 
-const bioInference = async (githubHandle,token) => {
-    
-    // get bio
-    const responseBio = await fetch(`${githubLink}/users/${githubHandle}`);
-    const dataBio = await responseBio.json();
-  
-    if (dataBio.message && dataBio.message === "Not Found") {
-      throw new Error("Invalid GitHub handle inputted");
-    } else {
-      const bio = dataBio.bio
-    }
+const shortBioGenerator = async (
+  githubHandle,
+  token,
+  bio,
+  repos,
+  top_language_n
+) => {
+  const responseReadme = await fetch(
+    `${githubLink}/repos/${githubHandle}/${githubHandle}/contents/README.md`
+  );
+  const dataReadme = await responseReadme.json();
+  const decodeReadme = atob(dataReadme.content);
 
-    // get readme
-    const responseReadMe = await fetch(`${githubLink}/repos/${githubHandle}/${githubHandle}/contents/README.md`)
-    const dataReadMe = await responseReadMe.json();
-
-    if (dataReadMe.message && dataReadMe.message === "Not Found") {
-        throw new Error("Invalid GitHub handle inputted");
-      } else {
-        var content = dataReadMe.content
-        decodeContent = atob(content);
-    }
-
-    // get top language
-    const responseRepos = await fetch("https://api.github.com/user/repos?per_page=1000", {
+  if (token) {
+    const dataLanguages = repos.map((r) => {
+      return fetch(`${r.languages_url}${r.private ? "?type=private" : ""}`, {
         method: "GET",
-        headers: {'Authorization': 'token ' + token}
-      })
+        headers: {
+          Authorization: `token ${token}`,
+        },
+      }).then((data) => data.json());
+    });
 
-      const dataRepos = await responseRepos.json()
+    const languages = await Promise.all(dataLanguages);
 
-    var languageList = []
-    var privateRepo = []
+    const languagesCount = languages.reduce((result, l) => {
+      Object.keys(l).forEach((key) => {
+        result[key] = (result[key] || 0) + l[key];
+      });
+      return result;
+    }, {});
 
-    for(let i = 0; i < dataRepos.length; i++) {
-        let obj = dataRepos[i];
-        
-        languageList.push(obj.languages_url)
-        privateRepo.push(obj.private)
-    }
+    const sortedLanguagesCount = Object.fromEntries(
+      Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
+    );
 
-    languages = []
+    const totalLanguagesCount = Object.values(sortedLanguagesCount).reduce(
+      (result, count) => result + count,
+      0
+    );
 
-    for(let i=0; i < languageList.length; i++ ){
-        const repos = languageList[i]
-        const privateStatus = privateRepo[i]
+    const languagesPercentage = Object.keys(sortedLanguagesCount).reduce(
+      (result, key) => {
+        result[key] = (sortedLanguagesCount[key] / totalLanguagesCount).toFixed(
+          3
+        );
+        return result;
+      },
+      {}
+    );
 
-        if (privateStatus){
-            const responseLanguage = await fetch(`${repos}?type=private`, {
-                method: "GET",
-                headers: {'Authorization': 'token ' + token}
-              })
-    
-            const dataLanguage = await responseLanguage.json()
-    
-            languages.push(dataLanguage)
-        } else {
-            const responseLanguage = await fetch(repos, {
-                method: "GET",
-                headers: {'Authorization': 'token ' + token}
-              })
-    
-            const dataLanguage = await responseLanguage.json()
-    
-            languages.push(dataLanguage)
-        }
-    }
+    const topNLanguages = Object.keys(sortedLanguagesCount).slice(
+      0,
+      top_language_n
+    );
 
-
-    var topLanguage = languages.reduce((acc, obj) => {
-        for (let [key, value] of Object.entries(obj)) {
-          acc[key] = (acc[key] || 0) + value;
-        }
-        return acc;
-      }, {});
-
-    topLanguage = Object.entries(topLanguage).sort((a, b) => b[1] - a[1]);
-
-    topLanguage = Object.fromEntries(topLanguage);
-
-    const topNLanguage = Object.keys(topLanguage).slice(0,5);
-
-    const percentageLanguages = Object.values(topLanguage).reduce((acc, curr) => acc + curr);
-
-    const percentageResult = {};
-
-    for (const key in topLanguage) {
-        if (Object.hasOwnProperty.call(topLanguage, key)) {
-            percentageResult[key] = ((topLanguage[key] / percentageLanguages) * 100).toFixed(3);
-        }
-    }
-      
-    return { bio, decodeContent, percentageResult, topNLanguage}
-
-  };
+    return {
+      languages_percentage: languagesPercentage,
+      top_n_languages: topNLanguages,
+    };
+  }
+};
 
 export default shortBioGenerator;
