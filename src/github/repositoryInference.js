@@ -98,8 +98,22 @@ const repositoryInference = async (
   );
 
   const popularRepo = originalRepo.slice(0, top_repo_n).map((r) => {
-    const { name, html_url, description, stargazers_count, forks_count } = r;
-    return { name, html_url, description, stargazers_count, forks_count };
+    const {
+      name,
+      html_url,
+      description,
+      language,
+      stargazers_count,
+      forks_count,
+    } = r;
+    return {
+      name,
+      html_url,
+      description,
+      top_language: language,
+      stargazers_count,
+      forks_count,
+    };
   });
 
   const stats = {
