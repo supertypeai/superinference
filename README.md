@@ -110,7 +110,7 @@ The calls in the code example above are unauthorized requests, so it collects da
 You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also extract and infer stats from private repositories not available to the public.
 
 ```js
-inferFromGithub("onlyphantom", top_repo_n = 10, token = oauth_token)
+inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, top_repo_n:10 })
 ```
 
 This returns the top 10 repositories, including private ones, using a GitHub OAuth token.

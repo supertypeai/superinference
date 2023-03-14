@@ -21,8 +21,8 @@ const headerLinkParser = (header) => {
 
 const repositoryInference = async (
   githubHandle,
-  top_repo_n = 3,
-  token = null
+  token = null,
+  top_repo_n = 3
 ) => {
   let response, links;
   let repos = [];
@@ -32,12 +32,13 @@ const repositoryInference = async (
       response = await fetch(
         links && links.next
           ? links.next
-          : `${githubLink}/user/repos?per_page=100`, {
-            method: "GET",
-            headers: {
-              Authorization: `token ${token}`,
-            },
-          }
+          : `${githubLink}/user/repos?per_page=100`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `token ${token}`,
+          },
+        }
       );
 
       const data = await response.json();
@@ -51,7 +52,6 @@ const repositoryInference = async (
       links =
         response.headers.get("Link") &&
         headerLinkParser(response.headers.get("Link"));
-
     } while (links?.next);
   } else {
     do {
@@ -72,20 +72,21 @@ const repositoryInference = async (
       links =
         response.headers.get("Link") &&
         headerLinkParser(response.headers.get("Link"));
-
     } while (links?.next);
   }
 
   repos.sort(
     (a, b) =>
-      b.stargazers_count +
-      b.forks_count -
-      (a.stargazers_count + a.forks_count)
+      b.stargazers_count + b.forks_count - (a.stargazers_count + a.forks_count)
   );
 
-  const originalRepo = repos.filter((r) => r.fork === false && r.owner.login === githubHandle);
+  const originalRepo = repos.filter(
+    (r) => r.fork === false && r.owner.login === githubHandle
+  );
 
-  const forkedRepo = repos.filter((r) => r.fork === true && r.owner.login === githubHandle);
+  const forkedRepo = repos.filter(
+    (r) => r.fork === true && r.owner.login === githubHandle
+  );
 
   const counts = originalRepo.reduce(
     (result, r) => {
@@ -101,14 +102,14 @@ const repositoryInference = async (
     return { name, html_url, description, stargazers_count, forks_count };
   });
 
-  const data = {
+  const stats = {
     original_repo_count: originalRepo.length,
     forked_repo_count: forkedRepo.length,
     ...counts,
     top_repo_stars_forks: popularRepo,
   };
 
-  return data;
+  return { stats, originalRepo };
 };
 
 export default repositoryInference;
