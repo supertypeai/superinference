@@ -39,12 +39,12 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 import { inferFromDevto, inferFromGithub } from "superinference";
 
 
-const { profile, stats } = inferFromGithub("onlyphantom").then((data) => {
+const { profile, stats } = inferFromGithub({ githubHandle:"onlyphantom" }).then((data) => {
     // do something with the data, such as setting states or updating UI
   return data
 });
     
-const bio = inferFromDevto("onlyphantom").then((data) => {
+const bio = inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
     return data
 })
 ```
