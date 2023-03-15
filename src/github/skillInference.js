@@ -5,7 +5,7 @@ const githubLink = endpoints["github"];
 const skillInference = async (
   githubHandle,
   bio,
-  repos,
+  originalRepo,
   token = null,
   top_language_n = 3
 ) => {
@@ -40,7 +40,7 @@ const skillInference = async (
     `${githubLink}/repos/${githubHandle}/${githubHandle}/contents/README.md`
   );
   const dataReadme = await responseReadme.json();
-  if (dataReadme) {
+  if (dataReadme.content) {
     decodeReadme = atob(dataReadme.content)
       .replace(
         /\\n|###|'|ð|http[s]?:\/\/\S+|[\(\[].*?[\)\]]|<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/g,
@@ -84,7 +84,7 @@ const skillInference = async (
   // languages
   let sortedLanguagesCount, languagesPercentage;
   if (token) {
-    const dataLanguages = repos.map((r) =>
+    const dataLanguages = originalRepo.map((r) =>
       fetch(`${r.languages_url}${r.private ? "?type=private" : ""}`, {
         method: "GET",
         headers: {
@@ -108,13 +108,15 @@ const skillInference = async (
 
     languagesPercentage = Object.keys(sortedLanguagesCount).reduce(
       (result, key) => {
-        result[key] = (sortedLanguagesCount[key] / repos.length).toFixed(3);
+        result[key] = (sortedLanguagesCount[key] / originalRepo.length).toFixed(
+          3
+        );
         return result;
       },
       {}
     );
   } else {
-    const languagesCount = repos.reduce((result, r) => {
+    const languagesCount = originalRepo.reduce((result, r) => {
       if (r.language) {
         result[r.language] = (r.language || 0) + 1;
       }

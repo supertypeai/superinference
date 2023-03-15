@@ -25,6 +25,10 @@ const contributionInference = async (githubHandle, token) => {
 
       if (data.message && data.message === "Validation Failed") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (responseIssue.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         dataIssue.push(...data.items);
       }
@@ -51,6 +55,10 @@ const contributionInference = async (githubHandle, token) => {
 
       if (data.message && data.message === "Validation Failed") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (responsePR.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         dataPR.push(...data.items);
       }
@@ -71,6 +79,10 @@ const contributionInference = async (githubHandle, token) => {
 
       if (data.message && data.message === "Validation Failed") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (responseIssue.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         dataIssue.push(...data.items);
       }
@@ -91,6 +103,10 @@ const contributionInference = async (githubHandle, token) => {
 
       if (data.message && data.message === "Validation Failed") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (responsePR.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         dataPR.push(...data.items);
       }
@@ -147,7 +163,7 @@ const contributionInference = async (githubHandle, token) => {
     issue_count: issues.length,
     total_pr_count: pr.length,
     merged_pr_count: mergedPR,
-    contribution_per_owner_count: contributionCount,
+    contribution_count_per_repo_owner: contributionCount,
     created_issue: issues,
     created_pr: pr,
   };

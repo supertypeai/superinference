@@ -45,6 +45,10 @@ const repositoryInference = async (
 
       if (data.message && data.message === "Not Found") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (response.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         repos.push(...data);
       }
@@ -65,6 +69,10 @@ const repositoryInference = async (
 
       if (data.message && data.message === "Not Found") {
         throw new Error("Invalid GitHub handle inputted");
+      } else if (response.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please use an authenticated request"
+        );
       } else {
         repos.push(...data);
       }
@@ -123,7 +131,7 @@ const repositoryInference = async (
     top_repo_stars_forks: popularRepo,
   };
 
-  return { stats, originalRepo };
+  return { stats, originalRepo, repos };
 };
 
 export default repositoryInference;
