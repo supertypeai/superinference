@@ -1,9 +1,4 @@
 import endpoints from "../endpoints.json";
-import { toString } from "nlcst-to-string";
-import { retext } from "retext";
-import retextPos from "retext-pos";
-import retextKeywords from "retext-keywords";
-import stopwords from "stopwords";
 
 const githubLink = endpoints["github"];
 
@@ -14,18 +9,19 @@ const skillInference = async (
   token = null,
   top_language_n = 3
 ) => {
-
   // keywords list
-  const keywords = await fetch('https://raw.githubusercontent.com/supertypeai/collective/staging/src/data/profileTagsChoices.json') //temporary in staging branch, for production change itto main
-        .then(response => response.json());
+  const keywords = await fetch(
+    "https://raw.githubusercontent.com/supertypeai/collective/main/src/data/profileTagsChoices.json"
+  ).then((response) => response.json());
 
-  let labelArr = keywords.map((item) => item.label.toLowerCase());
-  let valueArr = keywords.map((item) => item.value.replace(/-/g, ' ').toLowerCase());
+  const labels = keywords.map((item) => item.label.toLowerCase());
+  const values = keywords.map((item) =>
+    item.value.replace(/-/g, " ").toLowerCase()
+  );
 
-  const keywordsList = [...new Set([...labelArr, ...valueArr])];
+  const keywordsList = [...new Set([...labels, ...values])];
 
   let decodeBio, decodeReadme;
-
   // bio
   if (bio) {
     decodeBio = bio
@@ -35,8 +31,8 @@ const skillInference = async (
       )
       .toLowerCase();
   }
-    var keyProfile = keywordsList.filter(word =>
-      new RegExp(`\\b${word}\\b`, "i").test(decodeBio)
+  let profileKeywords = keywordsList.filter((word) =>
+    new RegExp(`\\b${word}\\b`, "i").test(decodeBio)
   );
 
   // readme
@@ -53,22 +49,37 @@ const skillInference = async (
       .toLowerCase();
   }
 
-  keyProfile = [...new Set(keyProfile.concat(keywordsList.filter(word =>
-      new RegExp(`\\b${word}\\b`, "i").test(decodeContent)
-  )))]
+  profileKeywords = [
+    ...new Set(
+      profileKeywords.concat(
+        keywordsList.filter((word) =>
+          new RegExp(`\\b${word}\\b`, "i").test(decodeReadme)
+        )
+      )
+    ),
+  ];
 
-  //console log value and label
+  const keywordsFromValues = values
+    .filter((value) => profileKeywords.includes(value))
+    .map((word) => word.replace(/\s/g, "-").replace("/", "-"));
 
-  const commonValues = valueArr.filter(value => matchedWords.includes(value)).map(word => word.replace(/\s/g, '-').replace('/', '-'));
+  const capitalizedProfileKeywords = profileKeywords.map((word) =>
+    word
+      .split(" ")
+      .map((subWord) => subWord.charAt(0).toUpperCase() + subWord.slice(1))
+      .join(" ")
+  );
 
-  const capitalizeMatchedWords = matchedWords.map(word => word.split(' ').map(subWord => subWord.charAt(0).toUpperCase() + subWord.slice(1)).join(' '));
-    
-  const valueList = capitalizeMatchedWords.map(str => {
-      const dict = keywords.find(d => d.label === str);
+  const keywordsFromLabels = capitalizedProfileKeywords
+    .map((str) => {
+      const dict = keywords.find((d) => d.label === str);
       return dict ? dict.value : null;
-  }).filter(item => item !== null);
+    })
+    .filter((item) => item !== null);
 
-  const valueKeywordsList = [...new Set([...commonValues, ...valueList])];
+  const keyQualifications = [
+    ...new Set([...keywordsFromValues, ...keywordsFromLabels]),
+  ];
 
   // languages
   let sortedLanguagesCount, languagesPercentage;
@@ -121,8 +132,7 @@ const skillInference = async (
   );
 
   return {
-    key_qualifications: keyProfile,
-    value_keywords: valueKeywordsList,
+    key_qualifications: keyQualifications,
     top_n_languages: topNLanguages,
     languages_percentage: languagesPercentage
       ? languagesPercentage

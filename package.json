@@ -37,10 +37,6 @@
     "rollup": "^3.19.1"
   },
   "dependencies": {
-    "@rollup/plugin-json": "^6.0.0",
-    "retext": "^8.1.0",
-    "retext-keywords": "^7.2.0",
-    "retext-pos": "^4.1.0",
-    "stopwords": "^0.0.9"
+    "@rollup/plugin-json": "^6.0.0"
   }
 }
