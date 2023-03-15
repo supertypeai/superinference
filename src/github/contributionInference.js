@@ -12,7 +12,7 @@ const contributionInference = async (githubHandle, token) => {
       responseIssue = await fetch(
         linksIssue && linksIssue.next
           ? linksIssue.next
-          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=300`,
+          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=100`,
         {
           method: "GET",
           headers: {
@@ -38,7 +38,7 @@ const contributionInference = async (githubHandle, token) => {
       responsePR = await fetch(
         linksPR && linksPR.next
           ? linksPR.next
-          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=300`,
+          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=100`,
         {
           method: "GET",
           headers: {
@@ -64,7 +64,7 @@ const contributionInference = async (githubHandle, token) => {
       responseIssue = await fetch(
         linksIssue && linksIssue.next
           ? linksIssue.next
-          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=300`
+          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=100`
       );
 
       const data = await responseIssue.json();
@@ -84,7 +84,7 @@ const contributionInference = async (githubHandle, token) => {
       responsePR = await fetch(
         linksPR && linksPR.next
           ? linksPR.next
-          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=300`
+          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=100`
       );
 
       const data = await responsePR.json();

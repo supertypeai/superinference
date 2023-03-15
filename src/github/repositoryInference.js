@@ -32,7 +32,7 @@ const repositoryInference = async (
       response = await fetch(
         links && links.next
           ? links.next
-          : `${githubLink}/user/repos?per_page=300`,
+          : `${githubLink}/user/repos?per_page=100`,
         {
           method: "GET",
           headers: {
@@ -58,7 +58,7 @@ const repositoryInference = async (
       response = await fetch(
         links && links.next
           ? links.next
-          : `${githubLink}/users/${githubHandle}/repos?per_page=300`
+          : `${githubLink}/users/${githubHandle}/repos?per_page=100`
       );
 
       const data = await response.json();
