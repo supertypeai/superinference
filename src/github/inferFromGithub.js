@@ -25,9 +25,7 @@ const inferFromGithub = async ({
     top_language_n
   );
 
-  const contribution = token
-    ? await contributionInference(githubHandle, token)
-    : "only available for authorized request";
+  const contribution = await contributionInference(githubHandle, token);
 
   return { profile, stats, skill, contribution };
 };
