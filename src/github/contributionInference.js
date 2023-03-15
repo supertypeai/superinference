@@ -1,104 +1,155 @@
 import endpoints from "../endpoints.json";
+import { headerLinkParser } from "./repositoryInference";
 
 const githubLink = endpoints["github"];
 
 const contributionInference = async (githubHandle, token) => {
-  // issue
-  const responseIssue = await fetch(
-    `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=500`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `token ${token}`,
-      },
-    }
-  );
-  const dataIssue = await responseIssue.json();
-
-  const issues = await Promise.all(
-    dataIssue.items.map(async (i) => {
-      if (i.author_association !== "OWNER") {
-        const responseRepo = await fetch(i.repository_url, {
+  let responseIssue, responsePR, linksIssue, linksPR;
+  let dataIssue = [];
+  let dataPR = [];
+  if (token) {
+    do {
+      responseIssue = await fetch(
+        linksIssue && linksIssue.next
+          ? linksIssue.next
+          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=300`,
+        {
           method: "GET",
           headers: {
             Authorization: `token ${token}`,
           },
-        });
-        const dataRepo = await responseRepo.json();
-        return {
-          issue_title: i.title,
-          created_at: i.created_at,
-          state: i.state,
-          state_reason: i.state_reason,
-          repo_owner: dataRepo.owner.login,
-          repo_owner_type: dataRepo.owner.type,
-          repo_name: dataRepo.name,
-          repo_url: dataRepo.html_url,
-          repo_top_language: dataRepo.language,
-        };
+        }
+      );
+
+      const data = await responseIssue.json();
+
+      if (data.message && data.message === "Validation Failed") {
+        throw new Error("Invalid GitHub handle inputted");
+      } else {
+        dataIssue.push(...data.items);
       }
-    })
-  );
 
-  issues.filter((i) => i !== undefined);
+      linksIssue =
+        responseIssue.headers.get("Link") &&
+        headerLinkParser(responseIssue.headers.get("Link"));
+    } while (linksIssue?.next);
 
-  const orgIssues = issues.filter(
-    (i) => i.repo_owner_type === "Organization"
-  ).length;
-  const userIssues = issues.filter(
-    (i) => i.repo_owner_type !== "Organization"
-  ).length;
-
-  // pr
-  const responsePR = await fetch(
-    `${githubLink}/search/issues?q=type:pr is:merged author:${githubHandle}&sort=author-date&order=desc&per_page=500`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `token ${token}`,
-      },
-    }
-  );
-  const dataPR = await responsePR.json();
-
-  const pr = await Promise.all(
-    dataPR.items.map(async (p) => {
-      if (p.author_association !== "OWNER") {
-        const responseRepo = await fetch(p.repository_url, {
+    do {
+      responsePR = await fetch(
+        linksPR && linksPR.next
+          ? linksPR.next
+          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=300`,
+        {
           method: "GET",
           headers: {
             Authorization: `token ${token}`,
           },
-        });
-        const dataRepo = await responseRepo.json();
-        return {
-          pr_title: p.title,
-          created_at: p.created_at,
-          merged_at: p.pull_request.merged_at,
-          state: p.state,
-          state_reason: p.state_reason,
-          repo_owner: dataRepo.owner.login,
-          repo_owner_type: dataRepo.owner.type,
-          repo_name: dataRepo.name,
-          repo_url: dataRepo.html_url,
-          repo_top_language: dataRepo.language,
-        };
+        }
+      );
+
+      const data = await responsePR.json();
+
+      if (data.message && data.message === "Validation Failed") {
+        throw new Error("Invalid GitHub handle inputted");
+      } else {
+        dataPR.push(...data.items);
       }
-    })
+
+      linksPR =
+        responsePR.headers.get("Link") &&
+        headerLinkParser(responsePR.headers.get("Link"));
+    } while (linksPR?.next);
+  } else {
+    do {
+      responseIssue = await fetch(
+        linksIssue && linksIssue.next
+          ? linksIssue.next
+          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=300`
+      );
+
+      const data = await responseIssue.json();
+
+      if (data.message && data.message === "Validation Failed") {
+        throw new Error("Invalid GitHub handle inputted");
+      } else {
+        dataIssue.push(...data.items);
+      }
+
+      linksIssue =
+        responseIssue.headers.get("Link") &&
+        headerLinkParser(responseIssue.headers.get("Link"));
+    } while (linksIssue?.next);
+
+    do {
+      responsePR = await fetch(
+        linksPR && linksPR.next
+          ? linksPR.next
+          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=300`
+      );
+
+      const data = await responsePR.json();
+
+      if (data.message && data.message === "Validation Failed") {
+        throw new Error("Invalid GitHub handle inputted");
+      } else {
+        dataPR.push(...data.items);
+      }
+
+      linksPR =
+        responsePR.headers.get("Link") &&
+        headerLinkParser(responsePR.headers.get("Link"));
+    } while (linksPR?.next);
+  }
+
+  let issues = dataIssue.map((i) => {
+    if (i.author_association !== "OWNER") {
+      const splitURL = i.html_url.split("/");
+      return {
+        issue_title: i.title,
+        created_at: i.created_at,
+        state: i.state,
+        state_reason: i.state_reason,
+        repo_owner: splitURL[3],
+        repo_name: splitURL[4],
+        repo_url: `https://github.com/${splitURL[3]}/${splitURL[4]}`,
+      };
+    }
+  });
+  issues = issues.filter((i) => i !== undefined);
+
+  let pr = dataPR.map((p) => {
+    if (p.author_association !== "OWNER") {
+      const splitURL = p.html_url.split("/");
+      return {
+        pr_title: p.title,
+        created_at: p.created_at,
+        merged_at: p.pull_request.merged_at,
+        state: p.state,
+        state_reason: p.state_reason,
+        repo_owner: splitURL[3],
+        repo_name: splitURL[4],
+        repo_url: `https://github.com/${splitURL[3]}/${splitURL[4]}`,
+      };
+    }
+  });
+  pr = pr.filter((p) => p !== undefined);
+  const mergedPR = pr.filter((p) => p.merged_at).length;
+
+  let contributionCount = [...issues, ...pr].reduce((result, i) => {
+    result[i.repo_owner] = (result[i.repo_owner] || 0) + 1;
+    return result;
+  }, {});
+  contributionCount = Object.fromEntries(
+    Object.entries(contributionCount).sort(([, a], [, b]) => b - a)
   );
-
-  pr.filter((p) => p !== undefined);
-
-  const orgPR = pr.filter((p) => p.repo_owner_type === "Organization").length;
-  const userPR = pr.filter((p) => p.repo_owner_type !== "Organization").length;
 
   return {
-    org_issue_count: orgIssues,
-    user_issue_count: userIssues,
-    org_merged_pr_count: orgPR,
-    user_merged_pr_count: userPR,
+    issue_count: issues.length,
+    total_pr_count: pr.length,
+    merged_pr_count: mergedPR,
+    contribution_per_owner_count: contributionCount,
     created_issue: issues,
-    merged_pr: pr,
+    created_pr: pr,
   };
 };
 
