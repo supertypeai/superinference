@@ -24,7 +24,7 @@ const repositoryInference = async (
   token = null,
   top_repo_n = 3
 ) => {
-  let response, links;
+  let response, links, remainingRate, messageRepo;
   let repos = [];
 
   if (token) {
@@ -56,7 +56,9 @@ const repositoryInference = async (
       links =
         response.headers.get("Link") &&
         headerLinkParser(response.headers.get("Link"));
-    } while (links?.next);
+
+      remainingRate = +response.headers.get("X-Ratelimit-Remaining");
+    } while (links?.next && remainingRate > 0);
   } else {
     do {
       response = await fetch(
@@ -80,7 +82,13 @@ const repositoryInference = async (
       links =
         response.headers.get("Link") &&
         headerLinkParser(response.headers.get("Link"));
-    } while (links?.next);
+
+      remainingRate = +response.headers.get("X-Ratelimit-Remaining");
+    } while (links?.next && remainingRate > 0);
+  }
+
+  if (remainingRate === 0 && links?.next) {
+    messageRepo = `Hey there! Looks like the inference above is from the latest ${repos.length} repos since you've reached the API rate limit 😉`;
   }
 
   repos.sort(
@@ -131,7 +139,7 @@ const repositoryInference = async (
     top_repo_stars_forks: popularRepo,
   };
 
-  return { stats, originalRepo, repos };
+  return { stats, originalRepo, repos, messageRepo };
 };
 
 export default repositoryInference;

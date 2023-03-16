@@ -9,9 +9,8 @@ const activityInference = async (
   token = null,
   top_repo_n = 3
 ) => {
-  let responseCommit, linksCommit;
+  let responseCommit, linksCommit, data, remainingRate, messageCommit;
   let dataCommit = [];
-  let data;
   if (token) {
     do {
       responseCommit = await fetch(
@@ -32,7 +31,7 @@ const activityInference = async (
         throw new Error("Invalid GitHub handle inputted");
       } else if (responseCommit.status === 403) {
         throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+          "API rate limit exceeded, please wait a few minutes before you try again."
         );
       } else {
         dataCommit.push(...data.items);
@@ -41,7 +40,9 @@ const activityInference = async (
       linksCommit =
         responseCommit.headers.get("Link") &&
         headerLinkParser(responseCommit.headers.get("Link"));
-    } while (linksCommit?.next);
+
+      remainingRate = +responseCommit.headers.get("X-Ratelimit-Remaining");
+    } while (linksCommit?.next && remainingRate > 0);
   } else {
     do {
       responseCommit = await fetch(
@@ -65,7 +66,13 @@ const activityInference = async (
       linksCommit =
         responseCommit.headers.get("Link") &&
         headerLinkParser(responseCommit.headers.get("Link"));
-    } while (linksCommit?.next);
+
+      remainingRate = +responseCommit.headers.get("X-Ratelimit-Remaining");
+    } while (linksCommit?.next && remainingRate > 0);
+  }
+
+  if (remainingRate === 0 && linksCommit?.next) {
+    messageCommit = `Hey there! Looks like the inference above (except the commit_count) is from the latest ${dataCommit.length} commits since you've reached the API rate limit 😉`;
   }
 
   let commits = dataCommit.map((c) => {
@@ -166,9 +173,10 @@ const activityInference = async (
     commit_count_per_other_repo: sortedCounts["other_repo"],
     commit_count_per_repo_org_owner: sortedCounts["repo_org_owner"],
     commit_count_per_repo_user_owner: sortedCounts["repo_user_owner"],
+    commit_api_message: messageCommit ? messageCommit : "",
   };
 
-  return { activity, mostActiveRepo };
+  return { activity, mostActiveRepo, messageCommit };
 };
 
 export default activityInference;

@@ -4,7 +4,14 @@ import { headerLinkParser } from "./repositoryInference";
 const githubLink = endpoints["github"];
 
 const contributionInference = async (githubHandle, token) => {
-  let responseIssue, responsePR, linksIssue, linksPR;
+  let responseIssue,
+    responsePR,
+    linksIssue,
+    linksPR,
+    remainingRateIssue,
+    remainingRatePR,
+    messageIssue,
+    messagePR;
   let dataIssue = [];
   let dataPR = [];
   if (token) {
@@ -36,7 +43,9 @@ const contributionInference = async (githubHandle, token) => {
       linksIssue =
         responseIssue.headers.get("Link") &&
         headerLinkParser(responseIssue.headers.get("Link"));
-    } while (linksIssue?.next);
+
+      remainingRateIssue = +responseIssue.headers.get("X-Ratelimit-Remaining");
+    } while (linksIssue?.next && remainingRateIssue > 0);
 
     do {
       responsePR = await fetch(
@@ -66,7 +75,9 @@ const contributionInference = async (githubHandle, token) => {
       linksPR =
         responsePR.headers.get("Link") &&
         headerLinkParser(responsePR.headers.get("Link"));
-    } while (linksPR?.next);
+
+      remainingRatePR = +responsePR.headers.get("X-Ratelimit-Remaining");
+    } while (linksPR?.next && remainingRatePR > 0);
   } else {
     do {
       responseIssue = await fetch(
@@ -90,7 +101,9 @@ const contributionInference = async (githubHandle, token) => {
       linksIssue =
         responseIssue.headers.get("Link") &&
         headerLinkParser(responseIssue.headers.get("Link"));
-    } while (linksIssue?.next);
+
+      remainingRateIssue = +responseIssue.headers.get("X-Ratelimit-Remaining");
+    } while (linksIssue?.next && remainingRateIssue > 0);
 
     do {
       responsePR = await fetch(
@@ -114,7 +127,17 @@ const contributionInference = async (githubHandle, token) => {
       linksPR =
         responsePR.headers.get("Link") &&
         headerLinkParser(responsePR.headers.get("Link"));
-    } while (linksPR?.next);
+
+      remainingRatePR = +responsePR.headers.get("X-Ratelimit-Remaining");
+    } while (linksPR?.next && remainingRatePR > 0);
+  }
+
+  if (remainingRateIssue === 0 && linksIssue?.next) {
+    messageIssue = `Hey there! Looks like the inference above is from the latest ${dataIssue.length} issues since you've reached the API rate limit 😉`;
+  }
+
+  if (remainingRatePR === 0 && linksPR?.next) {
+    messagePR = `Hey there! Looks like the inference above is from the latest ${dataPR.length} PR since you've reached the API rate limit 😉`;
   }
 
   let issues = dataIssue.map((i) => {
@@ -159,14 +182,18 @@ const contributionInference = async (githubHandle, token) => {
     Object.entries(contributionCount).sort(([, a], [, b]) => b - a)
   );
 
-  return {
+  const contribution = {
     issue_count: issues.length,
     total_pr_count: pr.length,
     merged_pr_count: mergedPR,
     contribution_count_per_repo_owner: contributionCount,
     created_issue: issues,
     created_pr: pr,
+    issue_api_message: messageIssue ? messageIssue : "",
+    pr_api_message: messagePR ? messagePR : "",
   };
+
+  return { contribution, messageIssue, messagePR };
 };
 
 export default contributionInference;

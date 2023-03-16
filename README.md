@@ -20,6 +20,7 @@ It is currently actively being developed so more supported social media channels
 You might use superinference to generate profile pages of your app users, or to enrich your user data with additional information by inferring them from their social media accounts. You might also use it to accelerate your account creation process by directly inferring attributes such as their email address, name, and profile picture.
 
 ## Installation
+
 You can install the package using `yarn` or `npm`:
     
 ```bash 
@@ -126,7 +127,9 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
           "html_url": "https://github.com/AurelliaChristie/BeautIndonesia",
           ...
         }
-    ]
+    ],
+    "repo_api_message": "",
+    "commit_api_message": ""
 }
 
 // activity
@@ -173,7 +176,8 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "AurelliaChristie": 200,
         "onlyphantom": 175,
         ...
-    }
+    },
+    "commit_api_message": ""
 }
 
 // contribution
@@ -220,7 +224,9 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
           ...
         },
         ...
-    ]
+    ],
+    "issue_api_message": "",
+    "pr_api_message": ""
 }
 
 // closest_user
@@ -231,7 +237,11 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "supertypeai": 211,
         "Tech4Impact-21-22": 99,
         ...
-    }
+    },
+    "commit_api_message": "",
+    "issue_api_message": "",
+    "pr_api_message": "",
+    "repo_api_message": ""
 }
 
 // bio
@@ -250,12 +260,24 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
 ```
 
 ### Authenticated Requests
+
 The calls in the code example above are unauthorized requests, so it collects data from public profiles and returns information that is available to the public. 
 
-You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also extract and infer stats from private repositories not available to the public. Additionaly, we recommend you to use this option in the case of GitHub especially if you have more than 1k+ commits / issues / pull requests to overcome the API rate limit.
+You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also extract and infer stats from private repositories not available to the public.
 
 ```js
 inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, top_repo_n:10, top_language_n:5, closest_user_n:5 })
 ```
 
 This returns the top 10 repositories, including private ones, the top 5 languages, and the closest 5 users using a GitHub OAuth token.
+
+### API Rate Limit
+
+The APIs we use restrict the number of requests that can be made within a set timeframe. If this limit is exceeded, the API looping will cease and we will provide the inference from the data we have collected thus far. To see this information, you can check the `..._api_message` parameter included in the response. We include this parameter in all responses that are affected. An example of this message can be seen in the code snippet below:
+
+```js
+{
+  ...,
+  "commit_api_message": "Hey there! Looks like the inference above (except the commit_count) is from the latest 800 commits since you've reached the API rate limit 😉"
+}
+```

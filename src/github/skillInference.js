@@ -6,6 +6,7 @@ const skillInference = async (
   githubHandle,
   bio,
   originalRepo,
+  messageRepo,
   token = null,
   top_language_n = 3
 ) => {
@@ -138,7 +139,8 @@ const skillInference = async (
     top_n_languages: topNLanguages,
     languages_percentage: languagesPercentage
       ? languagesPercentage
-      : "only available for authorized request",
+      : "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
+    repo_api_message: messageRepo ? messageRepo : "",
   };
 };
 

@@ -13,7 +13,7 @@ const inferFromGithub = async ({
 } = {}) => {
   const profile = await profileInference(githubHandle, token);
 
-  let { stats, originalRepo, repos } = await repositoryInference(
+  let { stats, originalRepo, repos, messageRepo } = await repositoryInference(
     githubHandle,
     token,
     top_repo_n
@@ -23,13 +23,17 @@ const inferFromGithub = async ({
     githubHandle,
     profile.bio,
     originalRepo,
+    messageRepo,
     token,
     top_language_n
   );
 
-  const contribution = await contributionInference(githubHandle, token);
+  const { contribution, messageIssue, messagePR } = await contributionInference(
+    githubHandle,
+    token
+  );
 
-  const { activity, mostActiveRepo } = await activityInference(
+  const { activity, mostActiveRepo, messageCommit } = await activityInference(
     githubHandle,
     repos,
     token,
@@ -39,6 +43,8 @@ const inferFromGithub = async ({
   stats = {
     ...stats,
     top_repo_commits: mostActiveRepo,
+    repo_api_message: messageRepo ? messageRepo : "",
+    commit_api_message: messageCommit ? messageCommit : "",
   };
 
   const usersCount = Object.keys(
@@ -61,6 +67,10 @@ const inferFromGithub = async ({
   const closestUser = {
     closest_users: Object.keys(sortedUsersCount).slice(0, closest_user_n),
     collaboration_count: sortedUsersCount,
+    commit_api_message: messageCommit ? messageCommit : "",
+    issue_api_message: messageIssue ? messageIssue : "",
+    pr_api_message: messagePR ? messagePR : "",
+    repo_api_message: messageRepo ? messageRepo : "",
   };
 
   return {
