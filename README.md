@@ -39,15 +39,21 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 ```js
 import { inferFromDevto, inferFromGithub } from "superinference";
 
-
-const { profile, skill, stats, activity, contribution, closest_user } = inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
+// using then
+let profile, skill, stats, activity, contribution, closest_user, bio;
+inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     // do something with the data, such as setting states or updating UI
-  return data
+    ({ profile, skill, stats, activity, contribution, closest_user, bio } = data);
 });
     
-const bio = inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
-    return data
+inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
+    ({ bio } = data);
 })
+
+// using await 
+const { profile, skill, stats, activity, contribution, closest_user } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
+    
+const bio = await inferFromDevto({ devtoHandle:"onlyphantom" });
 ```
 
 Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `contribution`, `closest_user` and `bio` created from the two function calls above:
