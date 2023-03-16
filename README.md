@@ -20,6 +20,7 @@ It is currently actively being developed so more supported social media channels
 You might use superinference to generate profile pages of your app users, or to enrich your user data with additional information by inferring them from their social media accounts. You might also use it to accelerate your account creation process by directly inferring attributes such as their email address, name, and profile picture.
 
 ## Installation
+
 You can install the package using `yarn` or `npm`:
     
 ```bash 
@@ -39,66 +40,214 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 import { inferFromDevto, inferFromGithub } from "superinference";
 
 // using then
-let profile, stats, bio;
-inferFromGithub("onlyphantom").then((data) => {
+let profile, skill, stats, activity, contribution, closest_user, bio;
+inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     // do something with the data, such as setting states or updating UI
-    ({ profile, stats } = data);
+    ({ profile, skill, stats, activity, contribution, closest_user, bio } = data);
 });
     
-inferFromDevto("onlyphantom").then((data) => {
-    bio = data;
+inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
+    ({ bio } = data);
 })
 
-// using await
-let { profile, stats } = await inferFromGithub("onlyphantom");
-
-let bio = await inferFromDevto("onlyphantom");
+// using await 
+const { profile, skill, stats, activity, contribution, closest_user } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
+    
+const bio = await inferFromDevto({ devtoHandle:"onlyphantom" });
 ```
 
-Here is the sample result for each of `profile`, `stats` and `bio` created from the two function calls above:
+Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `contribution`, `closest_user` and `bio` created from the two function calls above:
 
 ```js
 // profile
 {
-  login: 'onlyphantom',
-  name: 'Samuel Chan',
-  company: '@teamalgoritma @supertypeai',
-  blog: 'https://www.youtube.com/c/samuelchan',
-  location: 'Indonesia',
-  email: null,
-  hireable: true,
-  twitter_username: null,
-  avatar_url: 'https://avatars.githubusercontent.com/u/16984453?v=4',
-  bio: 'Work: @teamalgoritma, @supertypeai Subscribe for content: https://www.youtube.com/c/samuelchan',
-  followers: 432,
-  following: 26
+    "login": "AurelliaChristie",
+    "name": "Aurellia Christie",
+    "company": "@supertypeai ",
+    "blog": "",
+    "location": null,
+    "email": null,
+    "hireable": null,
+    "twitter_username": null,
+    "avatar_url": "https://avatars.githubusercontent.com/u/69672839?v=4",
+    "bio": "Full Stack Data Scientist at @supertypeai",
+    "followers": 8,
+    "following": 8
+}
+
+// skill
+{
+    "key_qualifications": [ "consultancy", "full-stack-developer" ],
+    "top_n_languages": [ "HTML", "JavaScript", "Python" ],
+    "languages_percentage": {
+        "HTML": "0.500",
+        "JavaScript": "0.333",
+        "Python": "0.278",
+        "CSS": "0.222",
+        "R": "0.111",
+        "Jupyter Notebook": "0.056"
+    }
 }
 
 // stats
 {
-    "original_repo_count": 26,
-    "forked_repo_count": 4,
-    "stargazers_count": 280,
-    "forks_count": 231,
+    "original_repo_count": 18,
+    "forked_repo_count": 9,
+    "stargazers_count": 2,
+    "forks_count": 5,
     "top_repo_stars_forks": [
         {
-            "name": "cvessentials",
-            "html_url": "https://github.com/onlyphantom/cvessentials",
-            "description": "Tutorial Series (60 hour course): Essentials of computer vision",
-            "stargazers_count": 151,
-            "forks_count": 49
+          "name": "Ad-Fatigued-List-Generator",
+          "html_url": "https://github.com/AurelliaChristie/Ad-Fatigued-List-Generator",
+          "description": null,
+          "top_language": "Python",
+          "stargazers_count": 0,
+          "forks_count": 1
         },
         {
-            "name": "elang",
-            "html_url": "https://github.com/onlyphantom/elang",
-            ...
+          "name": "BeautIndonesia",
+          "html_url": "https://github.com/AurelliaChristie/BeautIndonesia",
+          ...
         },
         {
-            "name": "dataanalysis",
-            "html_url": "https://github.com/onlyphantom/dataanalysis",
-            ...
+          "name": "cryptocurrency",
+          "html_url": "https://github.com/AurelliaChristie/cryptocurrency",
+          ...
         }
-    ]
+    ],
+    "top_repo_commits": [
+        {
+          "name": "CookInd",
+          "html_url": "https://github.com/Tech4Impact-21-22/CookInd",
+          "description": null,
+          "top_language": "HTML",
+          "commits_count": 34
+        },
+        {
+          "name": "Ad-Fatigued-List-Generator",
+          "html_url": "https://github.com/AurelliaChristie/Ad-Fatigued-List-Generator",
+          ...
+        },
+        {
+          "name": "BeautIndonesia",
+          "html_url": "https://github.com/AurelliaChristie/BeautIndonesia",
+          ...
+        }
+    ],
+    "repo_api_message": "",
+    "commit_api_message": ""
+}
+
+// activity
+{
+    "commit_count": 624,
+    "most_active_day": "Thu",
+    "most_active_month": "Oct",
+    "weekly_average_commits": "5.200",
+    "commit_count_per_day": {
+        "Thu": 123,
+        "Fri": 117,
+        "Tue": 117,
+        "Wed": 114,
+        "Mon": 86,
+        "Sun": 41,
+        "Sat": 26
+    },
+    "commit_count_per_month": {
+        "Oct": 137,
+        "Jan": 92,
+        "Feb": 86,
+        "Sep": 57,
+        "Mar": 51,
+        "Nov": 51,
+        "Dec": 42,
+        "Jul": 30,
+        "Jun": 28,
+        "Aug": 21,
+        "May": 20,
+        "Apr": 9
+    },
+    "commit_count_per_owned_repo": {
+        "CookInd": 34,
+        "Ad-Fatigued-List-Generator": 30,
+        ...
+    },
+    "commit_count_per_other_repo": {
+        "generations-frontend": 70,
+        "MAL": 27,
+        ...
+    },
+    "commit_count_per_repo_org_owner": { "supertypeai": 144, "Tech4Impact-21-22": 65 },
+    "commit_count_per_repo_user_owner": {
+        "AurelliaChristie": 200,
+        "onlyphantom": 175,
+        ...
+    },
+    "commit_api_message": ""
+}
+
+// contribution
+{
+    "issue_count": 2,
+    "total_pr_count": 221,
+    "merged_pr_count": 210,
+    "contribution_count_per_repo_owner": {
+        "onlyphantom": 109,
+        "supertypeai": 67,
+        ...
+    },
+    "created_issue":  [
+        {
+          "issue_title": "Redirect URL in Github Authorization Not Working",
+          "created_at": "2023-03-10T08:47:30Z",
+          "state": "closed",
+          "state_reason": "completed",
+          "repo_owner": "supabase",
+          "repo_name": "supabase",
+          "repo_url": "https://github.com/supabase/supabase"
+        },
+        {
+          "issue_title": "Pictures and icons are not displayed correctly in PDF version",
+          "created_at": "2023-03-01T07:59:27Z",
+          ...
+        },
+        ...
+    ],
+    "created_pr": [
+        {
+          "pr_title": "Enhance nominate page",
+          "created_at": "2023-03-07T08:36:05Z",
+          "merged_at": "2023-03-08T04:33:41Z",
+          "state": "closed",
+          "state_reason": null,
+          "repo_owner": "supertypeai",
+          "repo_name": "collective",
+          "repo_url": "https://github.com/supertypeai/collective"
+        },
+        {
+          "pr_title": "add profile Aurellia",
+          "created_at": "2023-03-06T06:59:02Z",
+          ...
+        },
+        ...
+    ],
+    "issue_api_message": "",
+    "pr_api_message": ""
+}
+
+// closest_user
+{
+    "closest_users": [ "onlyphantom", "supertypeai", "Tech4Impact-21-22" ],
+    "collaboration_count": {
+        "onlyphantom": 284,
+        "supertypeai": 211,
+        "Tech4Impact-21-22": 99,
+        ...
+    },
+    "commit_api_message": "",
+    "issue_api_message": "",
+    "pr_api_message": "",
+    "repo_api_message": ""
 }
 
 // bio
@@ -117,12 +266,24 @@ Here is the sample result for each of `profile`, `stats` and `bio` created from 
 ```
 
 ### Authenticated Requests
+
 The calls in the code example above are unauthorized requests, so it collects data from public profiles and returns information that is available to the public. 
 
 You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also extract and infer stats from private repositories not available to the public.
 
 ```js
-inferFromGithub("onlyphantom", top_repo_n = 10, token = oauth_token)
+inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, top_repo_n:10, top_language_n:5, closest_user_n:5 })
 ```
 
-This returns the top 10 repositories, including private ones, using a GitHub OAuth token.
+This returns the top 10 repositories, including private ones, the top 5 languages, and the closest 5 users using a GitHub OAuth token.
+
+### API Rate Limit
+
+The APIs we use restrict the number of requests that can be made within a set timeframe. If this limit is exceeded, the API looping will cease and we will provide the inference from the data we have collected thus far. To see this information, you can check the `..._api_message` parameter included in the response. We include this parameter in all responses that are affected. An example of this message can be seen in the code snippet below:
+
+```js
+{
+  ...,
+  "commit_api_message": "Hey there! Looks like the inference above (except the commit_count) is from the latest 800 commits since you've reached the API rate limit 😉"
+}
+```

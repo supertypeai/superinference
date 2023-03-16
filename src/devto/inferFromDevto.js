@@ -2,7 +2,7 @@ import endpoints from "../endpoints.json"
 
 const devtoAPIRoot = endpoints["devto"];
 
-const inferFromDevto = async (devtoHandle) => {
+const inferFromDevto = async ({devtoHandle} = {}) => {
     const response = await fetch(`${devtoAPIRoot}/users/by_username?url=${devtoHandle}`);
 
     const data = await response.json();
