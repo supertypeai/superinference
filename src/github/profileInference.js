@@ -7,7 +7,7 @@ const profileInference = async (githubHandle) => {
   const data = await response.json();
 
   if (data.message && data.message === "Not Found") {
-    throw new Error("Invalid GitHub handle inputted");
+    throw new Error("Invalid GitHub handle inputted.");
   } else {
     const { login, name, company, blog, location, email, hireable, twitter_username, avatar_url, bio, followers, following } = data;
     return { login, name, company, blog, location, email, hireable, twitter_username, avatar_url, bio, followers, following }

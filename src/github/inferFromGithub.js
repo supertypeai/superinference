@@ -7,6 +7,7 @@ import skillInference from "./skillInference";
 const inferFromGithub = async ({
   githubHandle,
   token = null,
+  include_private = false,
   top_repo_n = 3,
   top_language_n = 3,
   closest_user_n = 3,
@@ -16,6 +17,7 @@ const inferFromGithub = async ({
   let { stats, originalRepo, repos, messageRepo } = await repositoryInference(
     githubHandle,
     token,
+    include_private,
     top_repo_n
   );
 
@@ -30,13 +32,15 @@ const inferFromGithub = async ({
 
   const { contribution, messageIssue, messagePR } = await contributionInference(
     githubHandle,
-    token
+    token,
+    include_private
   );
 
   const { activity, mostActiveRepo, messageCommit } = await activityInference(
     githubHandle,
     repos,
     token,
+    include_private,
     top_repo_n
   );
 
