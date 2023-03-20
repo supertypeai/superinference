@@ -7,6 +7,7 @@ const activityInference = async (
   githubHandle,
   repos,
   token = null,
+  include_private,
   top_repo_n = 3
 ) => {
   let responseCommit, linksCommit, data, remainingRate, messageCommit;
@@ -16,7 +17,9 @@ const activityInference = async (
       responseCommit = await fetch(
         linksCommit && linksCommit.next
           ? linksCommit.next
-          : `${githubLink}/search/commits?q=committer:${githubHandle}&sort=committer-date&order=desc&per_page=100`,
+          : `${githubLink}/search/commits?q=committer:${githubHandle}${
+              include_private ? "" : " is:public"
+            }&sort=committer-date&order=desc&per_page=100`,
         {
           method: "GET",
           headers: {
@@ -28,7 +31,7 @@ const activityInference = async (
       data = await responseCommit.json();
 
       if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
+        throw new Error("Invalid GitHub handle inputted.");
       } else if (responseCommit.status === 403) {
         throw new Error(
           "API rate limit exceeded, please wait a few minutes before you try again."
@@ -54,10 +57,10 @@ const activityInference = async (
       data = await responseCommit.json();
 
       if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
+        throw new Error("Invalid GitHub handle inputted.");
       } else if (responseCommit.status === 403) {
         throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+          "API rate limit exceeded, please use an authenticated request."
         );
       } else {
         dataCommit.push(...data.items);

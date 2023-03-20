@@ -9,7 +9,7 @@ export const headerLinkParser = (header) => {
   parts.forEach((p) => {
     const section = p.split(";");
     if (section.length != 2) {
-      throw new Error("section could not be split on ';'");
+      throw new Error("Section could not be split on ';'.");
     }
     const url = section[0].replace(/<(.*)>/, "$1").trim();
     const name = section[1].replace(/rel="(.*)"/, "$1").trim();
@@ -22,69 +22,125 @@ export const headerLinkParser = (header) => {
 const repositoryInference = async (
   githubHandle,
   token = null,
+  include_private,
   top_repo_n = 3
 ) => {
   let response, links, remainingRate, messageRepo;
   let repos = [];
 
-  if (token) {
-    do {
-      response = await fetch(
-        links && links.next
-          ? links.next
-          : `${githubLink}/user/repos?per_page=100`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        }
-      );
+  if (include_private) {
+    if (token) {
+      const responseCheck = await fetch(`${githubLink}/user`, {
+        method: "GET",
+        headers: {
+          Authorization: `token ${token}`,
+        },
+      });
 
-      const data = await response.json();
+      const check = await responseCheck.json();
 
-      if (data.message && data.message === "Not Found") {
-        throw new Error("Invalid GitHub handle inputted");
-      } else if (response.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
-        );
+      if (check.login === githubHandle) {
+        do {
+          response = await fetch(
+            links && links.next
+              ? links.next
+              : `${githubLink}/user/repos?per_page=100`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `token ${token}`,
+              },
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.message && data.message === "Not Found") {
+            throw new Error("Invalid GitHub handle inputted.");
+          } else if (response.status === 403) {
+            throw new Error(
+              "API rate limit exceeded, please wait an hour before you try again."
+            );
+          } else {
+            repos.push(...data);
+          }
+
+          links =
+            response.headers.get("Link") &&
+            headerLinkParser(response.headers.get("Link"));
+
+          remainingRate = +response.headers.get("X-Ratelimit-Remaining");
+        } while (links?.next && remainingRate > 0);
       } else {
-        repos.push(...data);
+        throw new Error(
+          "The token entered does not match the githubHandle you provided."
+        );
       }
-
-      links =
-        response.headers.get("Link") &&
-        headerLinkParser(response.headers.get("Link"));
-
-      remainingRate = +response.headers.get("X-Ratelimit-Remaining");
-    } while (links?.next && remainingRate > 0);
+    } else {
+      throw new Error(
+        "The include_private parameter can only be used when a valid token is provided."
+      );
+    }
   } else {
-    do {
-      response = await fetch(
-        links && links.next
-          ? links.next
-          : `${githubLink}/users/${githubHandle}/repos?per_page=100`
-      );
-
-      const data = await response.json();
-
-      if (data.message && data.message === "Not Found") {
-        throw new Error("Invalid GitHub handle inputted");
-      } else if (response.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+    if (token) {
+      do {
+        response = await fetch(
+          links && links.next
+            ? links.next
+            : `${githubLink}/users/${githubHandle}/repos?per_page=100`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `token ${token}`,
+            },
+          }
         );
-      } else {
-        repos.push(...data);
-      }
 
-      links =
-        response.headers.get("Link") &&
-        headerLinkParser(response.headers.get("Link"));
+        const data = await response.json();
 
-      remainingRate = +response.headers.get("X-Ratelimit-Remaining");
-    } while (links?.next && remainingRate > 0);
+        if (data.message && data.message === "Not Found") {
+          throw new Error("Invalid GitHub handle inputted.");
+        } else if (response.status === 403) {
+          throw new Error(
+            "API rate limit exceeded, please wait an hour before you try again."
+          );
+        } else {
+          repos.push(...data);
+        }
+
+        links =
+          response.headers.get("Link") &&
+          headerLinkParser(response.headers.get("Link"));
+
+        remainingRate = +response.headers.get("X-Ratelimit-Remaining");
+      } while (links?.next && remainingRate > 0);
+    } else {
+      do {
+        response = await fetch(
+          links && links.next
+            ? links.next
+            : `${githubLink}/users/${githubHandle}/repos?per_page=100`
+        );
+
+        const data = await response.json();
+
+        if (data.message && data.message === "Not Found") {
+          throw new Error("Invalid GitHub handle inputted.");
+        } else if (response.status === 403) {
+          throw new Error(
+            "API rate limit exceeded, please use an authenticated request."
+          );
+        } else {
+          repos.push(...data);
+        }
+
+        links =
+          response.headers.get("Link") &&
+          headerLinkParser(response.headers.get("Link"));
+
+        remainingRate = +response.headers.get("X-Ratelimit-Remaining");
+      } while (links?.next && remainingRate > 0);
+    }
   }
 
   if (remainingRate === 0 && links?.next) {

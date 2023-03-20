@@ -3,7 +3,7 @@ import { headerLinkParser } from "./repositoryInference";
 
 const githubLink = endpoints["github"];
 
-const contributionInference = async (githubHandle, token) => {
+const contributionInference = async (githubHandle, token, include_private) => {
   let responseIssue,
     responsePR,
     linksIssue,
@@ -19,7 +19,9 @@ const contributionInference = async (githubHandle, token) => {
       responseIssue = await fetch(
         linksIssue && linksIssue.next
           ? linksIssue.next
-          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=100`,
+          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}${
+              include_private ? "" : " is:public"
+            }&sort=author-date&order=desc&per_page=100`,
         {
           method: "GET",
           headers: {
@@ -31,10 +33,10 @@ const contributionInference = async (githubHandle, token) => {
       const data = await responseIssue.json();
 
       if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
+        throw new Error("Invalid GitHub handle inputted.");
       } else if (responseIssue.status === 403) {
         throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+          "API rate limit exceeded, please wait a few minutes before you try again."
         );
       } else {
         dataIssue.push(...data.items);
@@ -51,7 +53,9 @@ const contributionInference = async (githubHandle, token) => {
       responsePR = await fetch(
         linksPR && linksPR.next
           ? linksPR.next
-          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=100`,
+          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}${
+              include_private ? "" : " is:public"
+            }&sort=author-date&order=desc&per_page=100`,
         {
           method: "GET",
           headers: {
@@ -63,10 +67,10 @@ const contributionInference = async (githubHandle, token) => {
       const data = await responsePR.json();
 
       if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
+        throw new Error("Invalid GitHub handle inputted.");
       } else if (responsePR.status === 403) {
         throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+          "API rate limit exceeded, please wait a few minutes before you try again."
         );
       } else {
         dataPR.push(...data.items);
@@ -89,10 +93,10 @@ const contributionInference = async (githubHandle, token) => {
       const data = await responseIssue.json();
 
       if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
+        throw new Error("Invalid GitHub handle inputted.");
       } else if (responseIssue.status === 403) {
         throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
+          "API rate limit exceeded, please use an authenticated request."
         );
       } else {
         dataIssue.push(...data.items);
