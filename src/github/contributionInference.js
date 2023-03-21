@@ -1,5 +1,6 @@
 import endpoints from "../endpoints.json";
 import { headerLinkParser } from "./repositoryInference";
+import ingoingContributionInference from "./ingoingContributionInference";
 
 const githubLink = endpoints["github"];
 
@@ -186,18 +187,25 @@ const contributionInference = async (githubHandle, token, include_private) => {
     Object.entries(contributionCount).sort(([, a], [, b]) => b - a)
   );
 
+  const { ingoingContribution, messageContribution } = await ingoingContributionInference(
+    githubHandle,
+    token
+  );
+
   const contribution = {
     issue_count: issues.length,
     total_pr_count: pr.length,
     merged_pr_count: mergedPR,
-    contribution_count_per_repo_owner: contributionCount,
+    user_contribution_to_other_repo: contributionCount,
+    other_contribution_to_user_repo: ingoingContribution,
     created_issue: issues,
     created_pr: pr,
     issue_api_message: messageIssue ? messageIssue : "",
     pr_api_message: messagePR ? messagePR : "",
+    contribution_api_message: messageContribution ? messageContribution : ""
   };
 
-  return { contribution, messageIssue, messagePR };
+  return { contribution, messageIssue, messagePR, messageContribution };
 };
 
 export default contributionInference;
