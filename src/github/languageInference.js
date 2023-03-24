@@ -1,50 +1,51 @@
-
 import endpoints from "../endpoints.json";
+import { fetchRepo } from "./repositoryInference";
 
 const githubLink = endpoints["github"];
 
-const languageInference = async (
-    token = null,
-    top_language_n = 3
-  ) => {
-    let response, links, sortedLanguagesCount, languagesPercentage;
-    let repos = [];
-  
-    if (token) {
-      do {
-        response = await fetch(
-          links && links.next
-            ? links.next
-            : `${githubLink}/user/repos?per_page=100`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `token ${token}`,
-            },
-          }
-        );
-  
-        const data = await response.json();
-  
-        if (data.message && data.message === "Not Found") {
-          throw new Error("Invalid GitHub handle inputted");
-        } else {
-          repos.push(...data);
-        }
-  
-        links =
-          response.headers.get("Link") &&
-          headerLinkParser(response.headers.get("Link"));
-      } while (links?.next);
+const languageInference = async ({
+  githubHandle,
+  token = null,
+  include_private = false,
+  originalRepo = null,
+} = {}) => {
+  let repos = [];
 
-      const dataLanguages = repos.map((r) =>
-      fetch(`${r.languages_url}${r.private ? "?type=private" : ""}`, {
-        method: "GET",
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      }).then((data) => data.json())
+  if (!originalRepo) {
+    const { originalRepo } = await fetchRepo(
+      githubLink,
+      githubHandle,
+      token,
+      include_private
     );
+    repos = originalRepo;
+  } else {
+    repos = originalRepo;
+  }
+
+  let response, sortedLanguagesCount, languagesPercentage;
+  if (token) {
+    const dataLanguages = repos.map(async (r) => {
+      response = await fetch(
+        `${r.languages_url}${r.private ? "?type=private" : ""}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `token ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.status === 403) {
+        throw new Error(
+          "API rate limit exceeded, please wait an hour before you try again."
+        );
+      } else {
+        return data;
+      }
+    });
 
     const languages = await Promise.all(dataLanguages);
 
@@ -67,24 +68,27 @@ const languageInference = async (
       {}
     );
 
-    // const topNLanguages = Object.keys(sortedLanguagesCount).slice(
-    //     0,
-    //     top_language_n
-    //   );
+    return {
+      languages_percentage: languagesPercentage,
+    };
+  } else {
+    const languagesCount = repos.reduce((result, r) => {
+      if (r.language) {
+        result[r.language] = (r.language || 0) + 1;
+      }
+      return result;
+    }, {});
 
-    }
-    const topNLanguages = Object.keys(sortedLanguagesCount).slice(
-        0,
-        top_language_n
-    )
+    sortedLanguagesCount = Object.fromEntries(
+      Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
+    );
 
     return {
-        top_n_languages: topNLanguages,
-        languages_percentage: languagesPercentage
-          ? languagesPercentage
-          : "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
-      };
-
+      languages_percentage:
+        "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
+      sortedLanguagesCount,
+    };
   }
+};
 
 export default languageInference;
