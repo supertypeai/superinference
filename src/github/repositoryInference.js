@@ -19,11 +19,11 @@ export const headerLinkParser = (header) => {
   return links;
 };
 
-const repositoryInference = async (
+export const fetchRepo = async (
+  githubLink,
   githubHandle,
   token = null,
-  include_private,
-  top_repo_n = 3
+  include_private
 ) => {
   let response, links, remainingRate, messageRepo;
   let repos = [];
@@ -158,6 +158,22 @@ const repositoryInference = async (
 
   const forkedRepo = repos.filter(
     (r) => r.fork === true && r.owner.login === githubHandle
+  );
+
+  return { repos, originalRepo, forkedRepo, messageRepo };
+};
+
+const repositoryInference = async (
+  githubHandle,
+  token = null,
+  include_private,
+  top_repo_n = 3
+) => {
+  const { repos, originalRepo, forkedRepo, messageRepo } = await fetchRepo(
+    githubLink,
+    githubHandle,
+    token,
+    include_private
   );
 
   const counts = originalRepo.reduce(

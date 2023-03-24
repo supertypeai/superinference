@@ -1,4 +1,5 @@
 import endpoints from "../endpoints.json";
+import languageInference from "./languageInference";
 
 const githubLink = endpoints["github"];
 
@@ -8,7 +9,8 @@ const skillInference = async (
   originalRepo,
   messageRepo,
   token = null,
-  top_language_n = 3
+  top_language_n = 3,
+  include_private
 ) => {
   // keywords list
   const keywords = await fetch(
@@ -83,56 +85,27 @@ const skillInference = async (
   ];
 
   // languages
-  let sortedLanguagesCount, languagesPercentage;
+  let languagesPercentage, topNLanguages;
   if (token) {
-    const dataLanguages = originalRepo.map((r) =>
-      fetch(`${r.languages_url}${r.private ? "?type=private" : ""}`, {
-        method: "GET",
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      }).then((data) => data.json())
-    );
+    const { languages_percentage } = await languageInference({
+      githubHandle: githubHandle,
+      token: token,
+      include_private: include_private,
+      originalRepo: originalRepo,
+    });
 
-    const languages = await Promise.all(dataLanguages);
-
-    const languagesCount = languages.reduce((result, l) => {
-      Object.keys(l).forEach((key) => {
-        result[key] = (result[key] || 0) + 1;
-      });
-      return result;
-    }, {});
-
-    sortedLanguagesCount = Object.fromEntries(
-      Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
-    );
-
-    languagesPercentage = Object.keys(sortedLanguagesCount).reduce(
-      (result, key) => {
-        result[key] = (sortedLanguagesCount[key] / originalRepo.length).toFixed(
-          3
-        );
-        return result;
-      },
-      {}
-    );
+    languagesPercentage = languages_percentage;
+    topNLanguages = Object.keys(languagesPercentage).slice(0, top_language_n);
   } else {
-    const languagesCount = originalRepo.reduce((result, r) => {
-      if (r.language) {
-        result[r.language] = (r.language || 0) + 1;
-      }
-      return result;
-    }, {});
+    const { sortedLanguagesCount } = await languageInference({
+      githubHandle: githubHandle,
+      token: token,
+      include_private: include_private,
+      originalRepo: originalRepo,
+    });
 
-    sortedLanguagesCount = Object.fromEntries(
-      Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
-    );
+    topNLanguages = Object.keys(sortedLanguagesCount).slice(0, top_language_n);
   }
-
-  const topNLanguages = Object.keys(sortedLanguagesCount).slice(
-    0,
-    top_language_n
-  );
 
   return {
     key_qualifications: keyQualifications,
