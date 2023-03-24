@@ -269,10 +269,10 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
 
 The calls in the code example above are unauthorized requests, so it collects data from public profiles and returns information that is available to the public. 
 
-You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also extract and infer stats from private repositories not available to the public.
+You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also be able to extract and infer stats from private repositories not available to the public.
 
 ```js
-inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, top_repo_n:10, top_language_n:5, closest_user_n:5 })
+inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, include_private:true, top_repo_n:10, top_language_n:5, closest_user_n:5 })
 ```
 
 This returns the top 10 repositories, including private ones, the top 5 languages, and the closest 5 users using a GitHub OAuth token.
