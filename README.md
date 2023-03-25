@@ -140,32 +140,28 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
 
 // activity
 {
-    "commit_count": 624,
-    "most_active_day": "Thu",
-    "most_active_month": "Oct",
-    "weekly_average_commits": "5.200",
+    "commit_count": 433,
+    "weekly_average_commits": "3.639",
     "commit_count_per_day": {
-        "Thu": 123,
-        "Fri": 117,
-        "Tue": 117,
-        "Wed": 114,
-        "Mon": 86,
-        "Sun": 41,
-        "Sat": 26
+        "Wed": [ 48, 81 ],
+        "Thu": [ 41, 87 ],
+        "Mon": [ 29, 57 ],
+        "Fri": [ 26, 80 ],
+        "Tue": [ 26, 70 ],
+        "Sat": [ 2, 22 ],
+        "Sun": [ 0, 36 ]
     },
     "commit_count_per_month": {
-        "Oct": 137,
-        "Jan": 92,
-        "Feb": 86,
-        "Sep": 57,
-        "Mar": 51,
-        "Nov": 51,
-        "Dec": 42,
-        "Jul": 30,
-        "Jun": 28,
-        "Aug": 21,
-        "May": 20,
-        "Apr": 9
+        "Mar": [ 62, 63 ],
+        "Feb": [ 33, 33 ],
+        "Jun": [ 23, 23 ],
+        "Aug": [ 15, 19 ],
+        "Jul": [ 14, 29 ],
+        "Oct": [ 12, 122 ],
+        "Sep": [ 7, 34 ],
+        "Nov": [ 3, 34 ],
+        "Jan": [ 2, 52 ],
+        "Dec": [ 1, 24 ]
     },
     "commit_count_per_owned_repo": {
         "CookInd": 34,

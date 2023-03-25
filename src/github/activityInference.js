@@ -87,14 +87,20 @@ const activityInference = async (
     };
   });
 
+  const now = new Date();
+  const oneYearAgo = now.setFullYear(now.getFullYear() - 1);
   const counts = commits.reduce(
     (result, c) => {
       const cDay = new Date(c.created_at).toString().split(" ")[0];
       const cMonth = new Date(c.created_at).toString().split(" ")[1];
+      const lastTwelveMonths = new Date(c.created_at) >= oneYearAgo;
 
-      result["date"][c.created_at] = (result["date"][c.created_at] || 0) + 1;
-      result["day"][cDay] = (result["day"][cDay] || 0) + 1;
-      result["month"][cMonth] = (result["month"][cMonth] || 0) + 1;
+      result["day"][cDay] = result["day"][cDay] || [0, 0];
+      result["day"][cDay][0] += lastTwelveMonths ? 1 : 0;
+      result["day"][cDay][1] += 1;
+      result["month"][cMonth] = result["month"][cMonth] || [0, 0];
+      result["month"][cMonth][0] += lastTwelveMonths ? 1 : 0;
+      result["month"][cMonth][1] += 1;
       if (c.repo_owner === githubHandle) {
         result["owned_repo"][c.repo_name] =
           (result["owned_repo"][c.repo_name] || 0) + 1;
@@ -113,7 +119,6 @@ const activityInference = async (
       return result;
     },
     {
-      date: {},
       day: {},
       month: {},
       owned_repo: {},
@@ -125,8 +130,10 @@ const activityInference = async (
 
   let sortedCounts = {};
   Object.keys(counts).forEach((k) => {
-    if (k === "date") {
-      sortedCounts[k] = counts[k];
+    if (k === "day" || k === "month") {
+      sortedCounts[k] = Object.fromEntries(
+        Object.entries(counts[k]).sort((a, b) => b[1][0] - a[1][0])
+      );
     } else {
       sortedCounts[k] = Object.fromEntries(
         Object.entries(counts[k]).sort(([, a], [, b]) => b - a)
@@ -154,7 +161,7 @@ const activityInference = async (
 
   const totalWeeks =
     commits.length > 0
-      ? Math.round(
+      ? Math.floor(
           (new Date(commits[0]["created_at"]) -
             new Date(commits[commits.length - 1]["created_at"])) /
             (7 * 24 * 60 * 60 * 1000)
@@ -165,10 +172,6 @@ const activityInference = async (
 
   const activity = {
     commit_count: data.total_count,
-    most_active_day:
-      commits.length > 0 ? Object.keys(sortedCounts["day"])[0] : "",
-    most_active_month:
-      commits.length > 0 ? Object.keys(sortedCounts["month"])[0] : "",
     weekly_average_commits: weeklyAvgCommits,
     commit_count_per_day: sortedCounts["day"],
     commit_count_per_month: sortedCounts["month"],
