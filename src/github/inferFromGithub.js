@@ -15,7 +15,7 @@ const inferFromGithub = async ({
 } = {}) => {
   const profile = await profileInference(githubHandle, token);
 
-  let { stats, originalRepo, repos, messageRepo } = await repositoryInference(
+  let { stats, originalRepo, repos } = await repositoryInference(
     githubHandle,
     token,
     include_private,
@@ -26,53 +26,52 @@ const inferFromGithub = async ({
     githubHandle,
     profile.bio,
     originalRepo,
-    messageRepo,
     token,
     top_language_n,
     include_private
   );
 
-  const { contribution, messageIssue, messagePR } = await contributionInference(
-    githubHandle,
-    token,
-    include_private
-  );
+  // const { contribution, messageIssue, messagePR } = await contributionInference(
+  //   githubHandle,
+  //   token,
+  //   include_private
+  // );
 
-  const { activity, mostActiveRepo, messageCommit } = await activityInference(
-    githubHandle,
-    repos,
-    token,
-    include_private,
-    top_repo_n
-  );
+  // const { activity, mostActiveRepo, messageCommit } = await activityInference(
+  //   githubHandle,
+  //   repos,
+  //   token,
+  //   include_private,
+  //   top_repo_n
+  // );
 
-  const { closestUser } = await closestUserInference(
-    githubHandle,
-    token,
-    originalRepo,
-    contribution,
-    activity,
-    closest_user_n,
-    messageCommit,
-    messageIssue,
-    messagePR,
-    messageRepo
-  );
+  // const { closestUser } = await closestUserInference(
+  //   githubHandle,
+  //   token,
+  //   originalRepo,
+  //   contribution,
+  //   activity,
+  //   closest_user_n,
+  //   messageCommit,
+  //   messageIssue,
+  //   messagePR,
+  //   messageRepo
+  // );
 
-  stats = {
-    ...stats,
-    top_repo_commits: mostActiveRepo,
-    repo_api_message: messageRepo ? messageRepo : "",
-    commit_api_message: messageCommit ? messageCommit : "",
-  };
+  // stats = {
+  //   ...stats,
+  //   top_repo_commits: mostActiveRepo,
+  //   repo_api_message: messageRepo ? messageRepo : "",
+  //   commit_api_message: messageCommit ? messageCommit : "",
+  // };
 
   return {
     profile,
     skill,
     stats,
-    activity,
-    contribution,
-    closest_user: closestUser,
+    // activity,
+    // contribution,
+    // closest_user: closestUser,
   };
 };
 

@@ -1,90 +1,90 @@
-import endpoints from "../endpoints.json";
-import languageInference from "./languageInference";
+/**
+ * Infer data regarding the user's skills from their Github bio, README, and repositories.
+ *
+ * @param {string} githubHandle - The Github handle of the user.
+ * @param {string} bio - The user's Github bio
+ * @param {object} originalRepos - Original repository data (from `repositoryInference()`)
+ * @param {number} top_language_n - Number of top languages to be included in the inference. Default is 3.
+ * @param {boolean} include_private - Flag to include private repositories in the statistics. Default is false.
+ * @returns {Promise<object>} A Promise that resolves with an object containing the inferred data regarding the user's skills.
+ */
 
-const githubLink = endpoints["github"];
+import languageInference from "./languageInference";
+import request from "./utils/request";
 
 const skillInference = async (
   githubHandle,
   bio,
   originalRepo,
-  messageRepo,
   token = null,
   top_language_n = 3,
-  include_private
+  include_private = false
 ) => {
-  // keywords list
-  const keywords = await fetch(
+  // fetch keywords list
+  const keywordsResponse = await fetch(
     "https://raw.githubusercontent.com/supertypeai/collective/main/src/data/profileTagsChoices.json"
-  ).then((response) => response.json());
-
-  const labels = keywords.map((item) => item.label.toLowerCase());
-  const values = keywords.map((item) =>
-    item.value.replace(/-/g, " ").toLowerCase()
   );
+  const keywordsData = await keywordsResponse.json();
+  const keywords = keywordsData.map((item) => ({
+    label: item.label.toLowerCase(),
+    value: item.value.replace(/-/g, " ").toLowerCase(),
+  }));
 
-  const keywordsList = [...new Set([...labels, ...values])];
-
-  let decodeBio, decodeReadme;
-  // bio
-  if (bio) {
-    decodeBio = bio
-      .replace(
-        /\\n|###|'|ð|http[s]?:\/\/\S+|[\(\[].*?[\)\]]|<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/g,
-        ""
-      )
-      .toLowerCase();
-  }
-  let profileKeywords = keywordsList.filter((word) =>
-    new RegExp(`\\b${word}\\b`, "i").test(decodeBio)
-  );
-
-  // readme
-  const responseReadme = await fetch(
-    `${githubLink}/repos/${githubHandle}/${githubHandle}/contents/README.md`
-  );
-  const dataReadme = await responseReadme.json();
-  if (dataReadme.content) {
-    decodeReadme = atob(dataReadme.content)
-      .replace(
-        /\\n|###|'|ð|http[s]?:\/\/\S+|[\(\[].*?[\)\]]|<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/g,
-        ""
-      )
-      .toLowerCase();
-  }
-
-  profileKeywords = [
-    ...new Set(
-      profileKeywords.concat(
-        keywordsList.filter((word) =>
-          new RegExp(`\\b${word}\\b`, "i").test(decodeReadme)
-        )
-      )
-    ),
+  // combine labels and values to create list of unique keywords
+  const keywordsList = [
+    ...new Set(keywords.flatMap((item) => [item.label, item.value])),
   ];
 
-  const keywordsFromValues = values
-    .filter((value) => profileKeywords.includes(value))
-    .map((word) => word.replace(/\s/g, "-").replace("/", "-"));
+  // process bio and decode readme
+  const decodedBio = bio
+    ? bio
+        .replace(
+          /\\n|###|'|ð|http[s]?:\/\/\S+|[\(\[].*?[\)\]]|<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/g,
+          ""
+        )
+        .toLowerCase()
+    : "";
 
-  const capitalizedProfileKeywords = profileKeywords.map((word) =>
-    word
-      .split(" ")
-      .map((subWord) => subWord.charAt(0).toUpperCase() + subWord.slice(1))
-      .join(" ")
+  const { data } = await request(
+    `/repos/${githubHandle}/${githubHandle}/contents/README.md`
+  );
+  const decodedReadme = data.content
+    ? atob(data.content)
+        .replace(
+          /\\n|###|'|ð|http[s]?:\/\/\S+|[\(\[].*?[\)\]]|<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/g,
+          ""
+        )
+        .toLowerCase()
+    : "";
+
+  // find keywords in bio and readme
+  const profileKeywords = keywordsList.filter((word) =>
+    new RegExp(`\\b${word}\\b`, "i").test(`${decodedBio} ${decodedReadme}`)
   );
 
-  const keywordsFromLabels = capitalizedProfileKeywords
-    .map((str) => {
-      const dict = keywords.find((d) => d.label === str);
+  // find keywords from values and labels, and capitalize keywords from labels
+  const keywordsFromValues = keywords
+    .filter((item) => profileKeywords.includes(item.value))
+    .map((item) => item.value.replace(/\s/g, "-").replace("/", "-"));
+  const keywordsFromLabels = profileKeywords
+    .map((word) => {
+      const dict = keywords.find((item) => item.label === word);
       return dict ? dict.value : null;
     })
-    .filter((item) => item !== null);
+    .filter((item) => item !== null)
+    .map((word) =>
+      word
+        .split(" ")
+        .map((subWord) => subWord.charAt(0).toUpperCase() + subWord.slice(1))
+        .join(" ")
+    );
 
+  // create list of key qualifications
   const keyQualifications = [
     ...new Set([...keywordsFromValues, ...keywordsFromLabels]),
   ];
 
-  // languages
+  // calculate languages percentage and find top n languages
   let languagesPercentage, topNLanguages;
   if (token) {
     const { languages_percentage } = await languageInference({
@@ -108,12 +108,12 @@ const skillInference = async (
   }
 
   return {
+    inference_from_originalrepo_count: originalRepo.length,
     key_qualifications: keyQualifications,
     top_n_languages: topNLanguages,
-    languages_percentage: languagesPercentage
-      ? languagesPercentage
-      : "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
-    repo_api_message: messageRepo ? messageRepo : "",
+    languages_percentage:
+      languagesPercentage ||
+      "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
   };
 };
 

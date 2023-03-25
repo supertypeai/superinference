@@ -1,180 +1,62 @@
-import endpoints from "../endpoints.json";
+/**
+ * Infers data regarding the user's Github repositories.
+ *
+ * @param {string} githubHandle - The Github handle of the user.
+ * @param {string|null} token - Github access token to increase API rate limit and access private repositories. Default is null.
+ * @param {boolean} include_private - Flag to include private repositories in the statistics. Default is false.
+ * @param {number} top_repo_n - The number of top repositories to consider in the statistics. Default is 3.
+ * @returns {Promise<object>} A Promise that resolves with an object containing the inferred statistics and the repositories.
+ */
 
-const githubLink = endpoints["github"];
-
-export const headerLinkParser = (header) => {
-  const parts = header.split(",");
-  const links = {};
-
-  parts.forEach((p) => {
-    const section = p.split(";");
-    if (section.length != 2) {
-      throw new Error("Section could not be split on ';'.");
-    }
-    const url = section[0].replace(/<(.*)>/, "$1").trim();
-    const name = section[1].replace(/rel="(.*)"/, "$1").trim();
-    links[name] = url;
-  });
-
-  return links;
-};
+import multipageRequest from "./utils/multipageRequest";
+import usernameTokenCheck from "./utils/usernameTokenCheck";
 
 export const fetchRepo = async (
-  githubLink,
   githubHandle,
   token = null,
-  include_private
+  include_private = false
 ) => {
-  let response, links, remainingRate, messageRepo;
-  let repos = [];
+  let repoURL;
 
   if (include_private) {
-    if (token) {
-      const responseCheck = await fetch(`${githubLink}/user`, {
-        method: "GET",
-        headers: {
-          Authorization: `token ${token}`,
-        },
-      });
-
-      const check = await responseCheck.json();
-
-      if (check.login === githubHandle) {
-        do {
-          response = await fetch(
-            links && links.next
-              ? links.next
-              : `${githubLink}/user/repos?per_page=100`,
-            {
-              method: "GET",
-              headers: {
-                Authorization: `token ${token}`,
-              },
-            }
-          );
-
-          const data = await response.json();
-
-          if (data.message && data.message === "Not Found") {
-            throw new Error("Invalid GitHub handle inputted.");
-          } else if (response.status === 403) {
-            throw new Error(
-              "API rate limit exceeded, please wait an hour before you try again."
-            );
-          } else {
-            repos.push(...data);
-          }
-
-          links =
-            response.headers.get("Link") &&
-            headerLinkParser(response.headers.get("Link"));
-
-          remainingRate = +response.headers.get("X-Ratelimit-Remaining");
-        } while (links?.next && remainingRate > 0);
-      } else {
-        throw new Error(
-          "The token entered does not match the githubHandle you provided."
-        );
-      }
-    } else {
-      throw new Error(
-        "The include_private parameter can only be used when a valid token is provided."
-      );
-    }
+    usernameTokenCheck(githubHandle, token);
+    repoURL = `/user/repos?per_page=100`;
   } else {
-    if (token) {
-      do {
-        response = await fetch(
-          links && links.next
-            ? links.next
-            : `${githubLink}/users/${githubHandle}/repos?per_page=100`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `token ${token}`,
-            },
-          }
-        );
-
-        const data = await response.json();
-
-        if (data.message && data.message === "Not Found") {
-          throw new Error("Invalid GitHub handle inputted.");
-        } else if (response.status === 403) {
-          throw new Error(
-            "API rate limit exceeded, please wait an hour before you try again."
-          );
-        } else {
-          repos.push(...data);
-        }
-
-        links =
-          response.headers.get("Link") &&
-          headerLinkParser(response.headers.get("Link"));
-
-        remainingRate = +response.headers.get("X-Ratelimit-Remaining");
-      } while (links?.next && remainingRate > 0);
-    } else {
-      do {
-        response = await fetch(
-          links && links.next
-            ? links.next
-            : `${githubLink}/users/${githubHandle}/repos?per_page=100`
-        );
-
-        const data = await response.json();
-
-        if (data.message && data.message === "Not Found") {
-          throw new Error("Invalid GitHub handle inputted.");
-        } else if (response.status === 403) {
-          throw new Error(
-            "API rate limit exceeded, please use an authenticated request."
-          );
-        } else {
-          repos.push(...data);
-        }
-
-        links =
-          response.headers.get("Link") &&
-          headerLinkParser(response.headers.get("Link"));
-
-        remainingRate = +response.headers.get("X-Ratelimit-Remaining");
-      } while (links?.next && remainingRate > 0);
-    }
+    repoURL = `/users/${githubHandle}/repos?per_page=100`;
   }
 
-  if (remainingRate === 0 && links?.next) {
-    messageRepo = `Hey there! Looks like the inference above is from the latest ${repos.length} repos since you've reached the API rate limit 😉`;
-  }
+  const { dataList, incompleteResults } = await multipageRequest(
+    repoURL,
+    token
+  );
 
-  repos.sort(
+  dataList.sort(
     (a, b) =>
       b.stargazers_count + b.forks_count - (a.stargazers_count + a.forks_count)
   );
 
-  const originalRepo = repos.filter(
-    (r) => r.fork === false && r.owner.login === githubHandle
-  );
+  const originalRepo = [];
+  const forkedRepo = [];
 
-  const forkedRepo = repos.filter(
-    (r) => r.fork === true && r.owner.login === githubHandle
-  );
+  for (const repo of dataList) {
+    if (repo.fork === false && repo.owner.login === githubHandle) {
+      originalRepo.push(repo);
+    } else if (repo.fork === true && repo.owner.login === githubHandle) {
+      forkedRepo.push(repo);
+    }
+  }
 
-  return { repos, originalRepo, forkedRepo, messageRepo };
+  return { repos: dataList, originalRepo, forkedRepo, incompleteResults };
 };
 
 const repositoryInference = async (
   githubHandle,
   token = null,
-  include_private,
+  include_private = false,
   top_repo_n = 3
 ) => {
-  const { repos, originalRepo, forkedRepo, messageRepo } = await fetchRepo(
-    githubLink,
-    githubHandle,
-    token,
-    include_private
-  );
+  const { repos, originalRepo, forkedRepo, incompleteResults } =
+    await fetchRepo(githubHandle, token, include_private);
 
   const counts = originalRepo.reduce(
     (result, r) => {
@@ -185,33 +67,25 @@ const repositoryInference = async (
     { stargazers_count: 0, forks_count: 0 }
   );
 
-  const popularRepo = originalRepo.slice(0, top_repo_n).map((r) => {
-    const {
-      name,
-      html_url,
-      description,
-      language,
-      stargazers_count,
-      forks_count,
-    } = r;
-    return {
-      name,
-      html_url,
-      description,
-      top_language: language,
-      stargazers_count,
-      forks_count,
-    };
-  });
+  const popularRepo = originalRepo.slice(0, top_repo_n).map((repo) => ({
+    name: repo.name,
+    html_url: repo.html_url,
+    description: repo.description,
+    top_language: repo.language,
+    stargazers_count: repo.stargazers_count,
+    forks_count: repo.forks_count,
+  }));
 
   const stats = {
+    incomplete_results: incompleteResults,
+    inference_from_repo_count: repos.length,
     original_repo_count: originalRepo.length,
     forked_repo_count: forkedRepo.length,
     ...counts,
     top_repo_stars_forks: popularRepo,
   };
 
-  return { stats, originalRepo, repos, messageRepo };
+  return { stats, originalRepo, repos };
 };
 
 export default repositoryInference;

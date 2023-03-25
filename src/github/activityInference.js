@@ -1,5 +1,5 @@
 import endpoints from "../endpoints.json";
-import { headerLinkParser } from "./repositoryInference";
+import headerLinkParser from "./utils/headerLinkParser";
 
 const githubLink = endpoints["github"];
 

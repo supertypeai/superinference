@@ -1,4 +1,4 @@
-import { headerLinkParser } from "./repositoryInference";
+import headerLinkParser from "./utils/headerLinkParser";
 
 const closestUserInference = async (
   githubHandle,

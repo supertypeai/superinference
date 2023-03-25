@@ -14,8 +14,6 @@ const usernameTokenCheck = async (githubHandle, token) => {
     throw new Error(
       "If you want to include private repositories, please ensure that the Github handle is associated with the provided access token."
     );
-  } else {
-    return true;
   }
 };
 
