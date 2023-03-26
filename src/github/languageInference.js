@@ -1,7 +1,19 @@
-import endpoints from "../endpoints.json";
-import { fetchRepo } from "./repositoryInference";
+/**
+ * Infers data regarding the user's programming languages from their Github repositories.
+ *
+ * @param {Object} options - The options object that can contain the following:
+ * * @param {string} githubHandle - The Github handle of the user.
+ * * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ * * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
+ * * @param {Object} [originalRepo=null] - Original repository data (from `repositoryInference()`). Default is null.
+ *
+ * @returns {Promise<Object>} A Promise that resolves to an object containing information about the user's programming languages.
+ * @property {Object.<string, number>} languages_percentage - Maps each programming language used across all of the user's repositories to its percentage of usage, sorted in descending order by percentage. Only available for authorized request.
+ * @property {Object.<string, number>} sortedLanguagesCount - Maps each language to its count, sorted in descending order by count. If the request includes an authorization token, this property is omitted.
+ */
 
-const githubLink = endpoints["github"];
+import request from "./utils/request";
+import { fetchRepo } from "./repositoryInference";
 
 const languageInference = async ({
   githubHandle,
@@ -11,9 +23,9 @@ const languageInference = async ({
 } = {}) => {
   let repos = [];
 
+  // get the current user's owned repositories if no originalRepo is provided
   if (!originalRepo) {
     const { originalRepo } = await fetchRepo(
-      githubLink,
       githubHandle,
       token,
       include_private
@@ -23,35 +35,24 @@ const languageInference = async ({
     repos = originalRepo;
   }
 
-  let response, sortedLanguagesCount, languagesPercentage;
+  let sortedLanguagesCount, languagesPercentage;
   if (token) {
+    // get the languages for each repositories if token is provided
     const dataLanguages = repos.map(async (r) => {
-      response = await fetch(
+      const { data } = await request(
         `${r.languages_url}${r.private ? "?type=private" : ""}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        }
+        token
       );
-
-      const data = await response.json();
-
-      if (response.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please wait an hour before you try again."
-        );
-      } else {
-        return data;
-      }
+      return data;
     });
 
     const languages = await Promise.all(dataLanguages);
 
+    // count and sort the number of times each language is used
     const languagesCount = languages.reduce((result, l) => {
       Object.keys(l).forEach((key) => {
-        result[key] = (result[key] || 0) + 1;
+        const formattedKey = key.toLowerCase().replace(/ /g, "-");
+        result[formattedKey] = (result[formattedKey] || 0) + 1;
       });
       return result;
     }, {});
@@ -60,6 +61,7 @@ const languageInference = async ({
       Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
     );
 
+    // calculate the percentage of repositories that use each language
     languagesPercentage = Object.keys(sortedLanguagesCount).reduce(
       (result, key) => {
         result[key] = (sortedLanguagesCount[key] / repos.length).toFixed(3);
@@ -72,9 +74,11 @@ const languageInference = async ({
       languages_percentage: languagesPercentage,
     };
   } else {
+    // count and sort the number of times each language becomes a top language if no token is provided
     const languagesCount = repos.reduce((result, r) => {
-      if (r.language) {
-        result[r.language] = (r.language || 0) + 1;
+      const formattedLanguage = r.language?.toLowerCase().replace(/ /g, "-");
+      if (formattedLanguage) {
+        result[formattedLanguage] = (result[formattedLanguage] || 0) + 1;
       }
       return result;
     }, {});
@@ -84,8 +88,7 @@ const languageInference = async ({
     );
 
     return {
-      languages_percentage:
-        "Sorry, it looks like the information you're requesting is only available for authorized requests 😔",
+      languages_percentage: null,
       sortedLanguagesCount,
     };
   }

@@ -1,84 +1,57 @@
-import endpoints from "../endpoints.json";
-import { headerLinkParser } from "./repositoryInference";
+/**
+ * Infers a user's activities (commits) on GitHub.
+ *
+ * @param {string} githubHandle -  The Github handle of the user.
+ * @param {Array} repos - An array containing the user's repositories (from `repositoryInference()`).
+ * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
+ * @param {number} [top_repo_n=3] - The number of top repositories to consider in the statistics. Default is 3.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's activities.
+ *
+ * @property {Object} activity
+ * * @property {number} commit_count: The total number of commits all time.
+ * * @property {boolean} incomplete_commit_results: Indicates if the results for commits are incomplete due to reaching the API rate limit (exclude the commit_count).
+ * * @property {number} inference_from_commit_count:  The number of commits got from the search results (before reaching the API rate limit).
+ * * @property {number} weekly_average_commits: The weekly average number of commits.
+ * * @property {Object.<string,Array>} commit_count_per_day: Containing the number of commits per day of the week. The value of the object is an array containing two numbers:
+ * * * The first number represents the number of commits made on each day in the last 12 months.
+ * * * The second number represents the total number of commits made on each day all time.
+ * * @property {Object.<string,Array>} commit_count_per_month: Containing the number of commits per month. The value of the object is an array containing two numbers with the same behavior as above.
+ * * @property {Object.<string,number>} commit_count_per_owned_repo: Containing the number of commits made to each owned repository.
+ * * @property {Object.<string,number>} commit_count_per_other_repo: Containing the number of commits made to each repository not owned by the user.
+ * * @property {Object.<string,number>} commit_count_per_repo_org_owner: Containing the number of commits made to each repository owned by an organization.
+ * * @property {Object.<string,number>} commit_count_per_repo_user_owner: Containing the number of commits made to each repository owned by another user in the last year.
+ *
+ * @property {Array.<Object>} topNActiveRepo - An array of the user's top n active repositories based on the number of commits.
+ */
 
-const githubLink = endpoints["github"];
+import multipageRequest from "./utils/multipageRequest";
+import usernameTokenCheck from "./utils/usernameTokenCheck";
 
 const activityInference = async (
   githubHandle,
   repos,
   token = null,
-  include_private,
+  include_private = false,
   top_repo_n = 3
 ) => {
-  let responseCommit, linksCommit, data, remainingRate, messageCommit;
-  let dataCommit = [];
-  if (token) {
-    do {
-      responseCommit = await fetch(
-        linksCommit && linksCommit.next
-          ? linksCommit.next
-          : `${githubLink}/search/commits?q=committer:${githubHandle}${
-              include_private ? "" : " is:public"
-            }&sort=committer-date&order=desc&per_page=100`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        }
-      );
-
-      data = await responseCommit.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted.");
-      } else if (responseCommit.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please wait a few minutes before you try again."
-        );
-      } else {
-        dataCommit.push(...data.items);
-      }
-
-      linksCommit =
-        responseCommit.headers.get("Link") &&
-        headerLinkParser(responseCommit.headers.get("Link"));
-
-      remainingRate = +responseCommit.headers.get("X-Ratelimit-Remaining");
-    } while (linksCommit?.next && remainingRate > 0);
-  } else {
-    do {
-      responseCommit = await fetch(
-        linksCommit && linksCommit.next
-          ? linksCommit.next
-          : `${githubLink}/search/commits?q=committer:${githubHandle}&sort=committer-date&order=desc&per_page=100`
-      );
-
-      data = await responseCommit.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted.");
-      } else if (responseCommit.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please use an authenticated request."
-        );
-      } else {
-        dataCommit.push(...data.items);
-      }
-
-      linksCommit =
-        responseCommit.headers.get("Link") &&
-        headerLinkParser(responseCommit.headers.get("Link"));
-
-      remainingRate = +responseCommit.headers.get("X-Ratelimit-Remaining");
-    } while (linksCommit?.next && remainingRate > 0);
+  if (include_private) {
+    usernameTokenCheck(githubHandle, token);
   }
 
-  if (remainingRate === 0 && linksCommit?.next) {
-    messageCommit = `Hey there! Looks like the inference above (except the commit_count) is from the latest ${dataCommit.length} commits since you've reached the API rate limit 😉`;
-  }
+  // get all commits from the current user
+  const commitURL = `/search/commits?q=committer:${githubHandle}${
+    include_private ? "" : "+is:public"
+  }&sort=committer-date&order=desc&per_page=100`;
 
-  let commits = dataCommit.map((c) => {
+  const {
+    dataList: dataCommit,
+    incompleteResults,
+    totalCount,
+  } = await multipageRequest(commitURL, token);
+
+  const commits = dataCommit.map((c) => {
     return {
       created_at: new Date(c.commit.committer.date).toISOString().slice(0, 10),
       repo_owner: c.repository.owner.login,
@@ -87,14 +60,21 @@ const activityInference = async (
     };
   });
 
+  // count number of commits per category and sort the results
+  const now = new Date();
+  const oneYearAgo = now.setFullYear(now.getFullYear() - 1);
   const counts = commits.reduce(
     (result, c) => {
       const cDay = new Date(c.created_at).toString().split(" ")[0];
       const cMonth = new Date(c.created_at).toString().split(" ")[1];
+      const lastTwelveMonths = new Date(c.created_at) >= oneYearAgo;
 
-      result["date"][c.created_at] = (result["date"][c.created_at] || 0) + 1;
-      result["day"][cDay] = (result["day"][cDay] || 0) + 1;
-      result["month"][cMonth] = (result["month"][cMonth] || 0) + 1;
+      result["day"][cDay] = result["day"][cDay] || [0, 0];
+      result["day"][cDay][0] += lastTwelveMonths ? 1 : 0;
+      result["day"][cDay][1] += 1;
+      result["month"][cMonth] = result["month"][cMonth] || [0, 0];
+      result["month"][cMonth][0] += lastTwelveMonths ? 1 : 0;
+      result["month"][cMonth][1] += 1;
       if (c.repo_owner === githubHandle) {
         result["owned_repo"][c.repo_name] =
           (result["owned_repo"][c.repo_name] || 0) + 1;
@@ -113,7 +93,6 @@ const activityInference = async (
       return result;
     },
     {
-      date: {},
       day: {},
       month: {},
       owned_repo: {},
@@ -125,8 +104,10 @@ const activityInference = async (
 
   let sortedCounts = {};
   Object.keys(counts).forEach((k) => {
-    if (k === "date") {
-      sortedCounts[k] = counts[k];
+    if (k === "day" || k === "month") {
+      sortedCounts[k] = Object.fromEntries(
+        Object.entries(counts[k]).sort((a, b) => b[1][0] - a[1][0])
+      );
     } else {
       sortedCounts[k] = Object.fromEntries(
         Object.entries(counts[k]).sort(([, a], [, b]) => b - a)
@@ -134,13 +115,13 @@ const activityInference = async (
     }
   });
 
-  let mostActiveRepo = Object.keys(sortedCounts["owned_repo"]).slice(
-    0,
-    top_repo_n
-  );
-  mostActiveRepo = mostActiveRepo.map((repoName) => {
-    const repo = repos.find((r) => r.name === repoName);
-    if (repo) {
+  // get the top n active repositories based on total number of commits
+  const topNActiveRepo = Object.keys(sortedCounts["owned_repo"])
+    .slice(0, top_repo_n)
+    .map((repoName) => {
+      const repo = repos.find((r) => r.name === repoName);
+      if (!repo) return null;
+
       const { name, html_url, description, language } = repo;
       return {
         name,
@@ -149,26 +130,29 @@ const activityInference = async (
         top_language: language,
         commits_count: sortedCounts["owned_repo"][repoName],
       };
-    }
-  });
+    })
+    .filter((repo) => repo !== null);
 
-  const totalWeeks =
+  // calculate weekly average commits
+  const firstCommitDate =
+    commits.length > 0 ? new Date(commits[0]["created_at"]) : null;
+  const lastCommitDate =
     commits.length > 0
-      ? Math.round(
-          (new Date(commits[0]["created_at"]) -
-            new Date(commits[commits.length - 1]["created_at"])) /
-            (7 * 24 * 60 * 60 * 1000)
+      ? new Date(commits[commits.length - 1]["created_at"])
+      : null;
+  const totalWeeks =
+    firstCommitDate && lastCommitDate
+      ? Math.floor(
+          (firstCommitDate - lastCommitDate) / (7 * 24 * 60 * 60 * 1000)
         )
       : 0;
   const weeklyAvgCommits =
     commits.length > 0 ? (commits.length / totalWeeks).toFixed(3) : 0;
 
   const activity = {
-    commit_count: data.total_count,
-    most_active_day:
-      commits.length > 0 ? Object.keys(sortedCounts["day"])[0] : "",
-    most_active_month:
-      commits.length > 0 ? Object.keys(sortedCounts["month"])[0] : "",
+    commit_count: totalCount,
+    incomplete_commit_results: incompleteResults,
+    inference_from_commit_count: dataCommit.length,
     weekly_average_commits: weeklyAvgCommits,
     commit_count_per_day: sortedCounts["day"],
     commit_count_per_month: sortedCounts["month"],
@@ -176,10 +160,9 @@ const activityInference = async (
     commit_count_per_other_repo: sortedCounts["other_repo"],
     commit_count_per_repo_org_owner: sortedCounts["repo_org_owner"],
     commit_count_per_repo_user_owner: sortedCounts["repo_user_owner"],
-    commit_api_message: messageCommit ? messageCommit : "",
   };
 
-  return { activity, mostActiveRepo, messageCommit };
+  return { activity, topNActiveRepo };
 };
 
 export default activityInference;

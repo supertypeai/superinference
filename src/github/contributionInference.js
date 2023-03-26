@@ -1,211 +1,86 @@
-import endpoints from "../endpoints.json";
-import { headerLinkParser } from "./repositoryInference";
-import incomingContributionInference from "./incomingContributionInference";
+/**
+ * Infers a user's contributions (issue + PR) to repositories on GitHub.
+ *
+ * @param {string} githubHandle - The Github handle of the user.
+ * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's contribution.
+ * @property {boolean} incomplete_issue_results - Indicates if the results for issues are incomplete due to reaching the API rate limit.
+ * @property {boolean} incomplete_pr_results - Indicates if the results for PR are incomplete due to reaching the API rate limit.
+ * @property {number} inference_from_issue_count - The number of issues got from the search results (before reaching the API rate limit).
+ * @property {number} inference_from_pr_count - The number of PR got from the search results (before reaching the API rate limit).
+ * @property {number} merged_pr_count - The number of PR to other repo that have been merged.
+ * @property {Object.<string, number>} user_contribution_to_other_repo - Containing the user's contribution count (issue + PR) per repository owner.
+ */
 
-const githubLink = endpoints["github"];
+import multipageRequest from "./utils/multipageRequest";
+import usernameTokenCheck from "./utils/usernameTokenCheck";
 
-const contributionInference = async (githubHandle, token, include_private) => {
-  let responseIssue,
-    responsePR,
-    linksIssue,
-    linksPR,
-    remainingRateIssue,
-    remainingRatePR,
-    messageIssue,
-    messagePR;
-  let dataIssue = [];
-  let dataPR = [];
-  if (token) {
-    do {
-      responseIssue = await fetch(
-        linksIssue && linksIssue.next
-          ? linksIssue.next
-          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}${
-              include_private ? "" : " is:public"
-            }&sort=author-date&order=desc&per_page=100`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        }
-      );
-
-      const data = await responseIssue.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted.");
-      } else if (responseIssue.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please wait a few minutes before you try again."
-        );
-      } else {
-        dataIssue.push(...data.items);
-      }
-
-      linksIssue =
-        responseIssue.headers.get("Link") &&
-        headerLinkParser(responseIssue.headers.get("Link"));
-
-      remainingRateIssue = +responseIssue.headers.get("X-Ratelimit-Remaining");
-    } while (linksIssue?.next && remainingRateIssue > 0);
-
-    do {
-      responsePR = await fetch(
-        linksPR && linksPR.next
-          ? linksPR.next
-          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}${
-              include_private ? "" : " is:public"
-            }&sort=author-date&order=desc&per_page=100`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `token ${token}`,
-          },
-        }
-      );
-
-      const data = await responsePR.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted.");
-      } else if (responsePR.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please wait a few minutes before you try again."
-        );
-      } else {
-        dataPR.push(...data.items);
-      }
-
-      linksPR =
-        responsePR.headers.get("Link") &&
-        headerLinkParser(responsePR.headers.get("Link"));
-
-      remainingRatePR = +responsePR.headers.get("X-Ratelimit-Remaining");
-    } while (linksPR?.next && remainingRatePR > 0);
-  } else {
-    do {
-      responseIssue = await fetch(
-        linksIssue && linksIssue.next
-          ? linksIssue.next
-          : `${githubLink}/search/issues?q=type:issue author:${githubHandle}&sort=author-date&order=desc&per_page=100`
-      );
-
-      const data = await responseIssue.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted.");
-      } else if (responseIssue.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please use an authenticated request."
-        );
-      } else {
-        dataIssue.push(...data.items);
-      }
-
-      linksIssue =
-        responseIssue.headers.get("Link") &&
-        headerLinkParser(responseIssue.headers.get("Link"));
-
-      remainingRateIssue = +responseIssue.headers.get("X-Ratelimit-Remaining");
-    } while (linksIssue?.next && remainingRateIssue > 0);
-
-    do {
-      responsePR = await fetch(
-        linksPR && linksPR.next
-          ? linksPR.next
-          : `${githubLink}/search/issues?q=type:pr author:${githubHandle}&sort=author-date&order=desc&per_page=100`
-      );
-
-      const data = await responsePR.json();
-
-      if (data.message && data.message === "Validation Failed") {
-        throw new Error("Invalid GitHub handle inputted");
-      } else if (responsePR.status === 403) {
-        throw new Error(
-          "API rate limit exceeded, please use an authenticated request"
-        );
-      } else {
-        dataPR.push(...data.items);
-      }
-
-      linksPR =
-        responsePR.headers.get("Link") &&
-        headerLinkParser(responsePR.headers.get("Link"));
-
-      remainingRatePR = +responsePR.headers.get("X-Ratelimit-Remaining");
-    } while (linksPR?.next && remainingRatePR > 0);
+const contributionInference = async (
+  githubHandle,
+  token = null,
+  include_private = false
+) => {
+  if (include_private) {
+    usernameTokenCheck(githubHandle, token);
   }
 
-  if (remainingRateIssue === 0 && linksIssue?.next) {
-    messageIssue = `Hey there! Looks like the inference above is from the latest ${dataIssue.length} issues since you've reached the API rate limit 😉`;
-  }
+  // get all issues and PR from the current user
+  const urlPattern = (type) =>
+    `/search/issues?q=type:${type}+author:${githubHandle}${
+      include_private ? "" : "+is:public"
+    }&sort=author-date&order=desc&per_page=100`;
+  const issueURL = urlPattern("issue");
+  const prURL = urlPattern("pr");
 
-  if (remainingRatePR === 0 && linksPR?.next) {
-    messagePR = `Hey there! Looks like the inference above is from the latest ${dataPR.length} PR since you've reached the API rate limit 😉`;
-  }
+  const { dataList: dataIssue, incompleteResults: incompleteIssueResults } =
+    await multipageRequest(issueURL, token);
+  const { dataList: dataPR, incompleteResults: incompletePRResults } =
+    await multipageRequest(prURL, token);
 
-  let issues = dataIssue.map((i) => {
-    if (i.author_association !== "OWNER") {
-      const splitURL = i.html_url.split("/");
-      return {
-        issue_title: i.title,
-        created_at: i.created_at,
-        state: i.state,
-        state_reason: i.state_reason,
-        repo_owner: splitURL[3],
-        repo_name: splitURL[4],
-        repo_url: `https://github.com/${splitURL[3]}/${splitURL[4]}`,
-      };
-    }
+  // extract the useful information from issues and PR data
+  const extractRepoOwner = (item) => {
+    const splitURL = item.html_url.split("/");
+    return {
+      repo_owner: splitURL[3],
+    };
+  };
+
+  const extractPRInfo = (item) => ({
+    merged_at: item.pull_request.merged_at,
+    ...extractRepoOwner(item),
   });
-  issues = issues.filter((i) => i !== undefined);
 
-  let pr = dataPR.map((p) => {
-    if (p.author_association !== "OWNER") {
-      const splitURL = p.html_url.split("/");
-      return {
-        pr_title: p.title,
-        created_at: p.created_at,
-        merged_at: p.pull_request.merged_at,
-        state: p.state,
-        state_reason: p.state_reason,
-        repo_owner: splitURL[3],
-        repo_name: splitURL[4],
-        repo_url: `https://github.com/${splitURL[3]}/${splitURL[4]}`,
-      };
-    }
-  });
-  pr = pr.filter((p) => p !== undefined);
-  const mergedPR = pr.filter((p) => p.merged_at).length;
+  const issues = dataIssue
+    .filter((i) => i.author_association !== "OWNER")
+    .map(extractRepoOwner);
+  const pr = dataPR
+    .filter((p) => p.author_association !== "OWNER")
+    .map(extractPRInfo);
 
-  let contributionCount = [...issues, ...pr].reduce((result, i) => {
-    result[i.repo_owner] = (result[i.repo_owner] || 0) + 1;
+  // count the number of PR to other repo that have been merged
+  const mergedPRCount = pr.filter((p) => p.merged_at).length;
+
+  // count and sort number of the current user's contribution (issues + PR) per each repo owner
+  let contributionCount = [...issues, ...pr].reduce((result, item) => {
+    result[item.repo_owner] = (result[item.repo_owner] || 0) + 1;
     return result;
   }, {});
   contributionCount = Object.fromEntries(
     Object.entries(contributionCount).sort(([, a], [, b]) => b - a)
   );
 
-  const { incomingContribution, messageContribution } = await incomingContributionInference(
-    githubHandle,
-    token
-  );
-
   const contribution = {
-    issue_count: issues.length,
-    total_pr_count: pr.length,
-    merged_pr_count: mergedPR,
+    incomplete_issue_results: incompleteIssueResults,
+    incomplete_pr_results: incompletePRResults,
+    inference_from_issue_count: dataIssue.length,
+    inference_from_pr_count: dataPR.length,
+    merged_pr_count: mergedPRCount,
     user_contribution_to_other_repo: contributionCount,
-    other_contribution_to_user_repo: incomingContribution,
-    created_issue: issues,
-    created_pr: pr,
-    issue_api_message: messageIssue ? messageIssue : "",
-    pr_api_message: messagePR ? messagePR : "",
-    contribution_api_message: messageContribution ? messageContribution : ""
   };
 
-  return { contribution, messageIssue, messagePR, messageContribution };
+  return contribution;
 };
 
 export default contributionInference;
