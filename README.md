@@ -75,22 +75,25 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     "following": 8
 }
 
-// skill
+// skill (based on the user's owned repositories data)
 {
+    "inference_from_originalrepo_count": 17,
     "key_qualifications": [ "consultancy", "full-stack-developer" ],
-    "top_n_languages": [ "HTML", "JavaScript", "Python" ],
+    "top_n_languages": [ "html", "javascript", "python" ],
     "languages_percentage": {
-        "HTML": "0.500",
-        "JavaScript": "0.333",
-        "Python": "0.278",
-        "CSS": "0.222",
-        "R": "0.111",
-        "Jupyter Notebook": "0.056"
+        "html": "0.500",
+        "javascript": "0.333",
+        "python": "0.278",
+        "css": "0.222",
+        "r": "0.111",
+        "jupyter-notebook": "0.056"
     }
 }
 
-// stats
+// stats (repositories)
 {
+    "incomplete_repo_results": false,
+    "inference_from_repo_count": 26,
     "original_repo_count": 18,
     "forked_repo_count": 9,
     "stargazers_count": 2,
@@ -133,17 +136,17 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
           "html_url": "https://github.com/AurelliaChristie/BeautIndonesia",
           ...
         }
-    ],
-    "repo_api_message": "",
-    "commit_api_message": ""
+    ]
 }
 
-// activity
+// activity (commits)
 {
     "commit_count": 433,
+    "incomplete_commit_results": false,
+    "inference_from_commit_count": 433,
     "weekly_average_commits": "3.639",
     "commit_count_per_day": {
-        "Wed": [ 48, 81 ],
+        "Wed": [ 48, 81 ], // the first value represents the commit counts in the last 12 months, while the second value represents the commit counts of all time
         "Thu": [ 41, 87 ],
         "Mon": [ 29, 57 ],
         "Fri": [ 26, 80 ],
@@ -152,7 +155,7 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "Sun": [ 0, 36 ]
     },
     "commit_count_per_month": {
-        "Mar": [ 62, 63 ],
+        "Mar": [ 62, 63 ], // the first value represents the commit counts in the last 12 months, while the second value represents the commit counts of all time
         "Feb": [ 33, 33 ],
         "Jun": [ 23, 23 ],
         "Aug": [ 15, 19 ],
@@ -178,60 +181,24 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "AurelliaChristie": 200,
         "onlyphantom": 175,
         ...
-    },
-    "commit_api_message": ""
+    }
 }
 
-// contribution
+// contribution (issues and pull requests)
 {
-    "issue_count": 2,
-    "total_pr_count": 221,
-    "merged_pr_count": 210,
-    "contribution_count_per_repo_owner": {
+    "incomplete_issue_results": false,
+    "incomplete_pr_results": false,
+    "inference_from_issue_count": 2,
+    "inference_from_pr_count": 151,
+    "merged_pr_count": 108,
+    "user_contribution_to_other_repo": {
         "onlyphantom": 109,
         "supertypeai": 67,
         ...
-    },
-    "created_issue":  [
-        {
-          "issue_title": "Redirect URL in Github Authorization Not Working",
-          "created_at": "2023-03-10T08:47:30Z",
-          "state": "closed",
-          "state_reason": "completed",
-          "repo_owner": "supabase",
-          "repo_name": "supabase",
-          "repo_url": "https://github.com/supabase/supabase"
-        },
-        {
-          "issue_title": "Pictures and icons are not displayed correctly in PDF version",
-          "created_at": "2023-03-01T07:59:27Z",
-          ...
-        },
-        ...
-    ],
-    "created_pr": [
-        {
-          "pr_title": "Enhance nominate page",
-          "created_at": "2023-03-07T08:36:05Z",
-          "merged_at": "2023-03-08T04:33:41Z",
-          "state": "closed",
-          "state_reason": null,
-          "repo_owner": "supertypeai",
-          "repo_name": "collective",
-          "repo_url": "https://github.com/supertypeai/collective"
-        },
-        {
-          "pr_title": "add profile Aurellia",
-          "created_at": "2023-03-06T06:59:02Z",
-          ...
-        },
-        ...
-    ],
-    "issue_api_message": "",
-    "pr_api_message": ""
+    }
 }
 
-// closest_user
+// closest_user (based on the total commits, issues, and pull requests the user gave to and received from other users)
 {
     "closest_users": [ "onlyphantom", "supertypeai", "Tech4Impact-21-22" ],
     "collaboration_count": {
@@ -239,11 +206,7 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "supertypeai": 211,
         "Tech4Impact-21-22": 99,
         ...
-    },
-    "commit_api_message": "",
-    "issue_api_message": "",
-    "pr_api_message": "",
-    "repo_api_message": ""
+    }
 }
 
 // bio
@@ -275,11 +238,6 @@ This returns the top 10 repositories, including private ones, the top 5 language
 
 ### API Rate Limit
 
-The APIs we use restrict the number of requests that can be made within a set timeframe. If this limit is exceeded, the API looping will cease and we will provide the inference from the data we have collected thus far. To see this information, you can check the `..._api_message` parameter included in the response. We include this parameter in all responses that are affected. An example of this message can be seen in the code snippet below:
-
-```js
-{
-  ...,
-  "commit_api_message": "Hey there! Looks like the inference above (except the commit_count) is from the latest 800 commits since you've reached the API rate limit 😉"
-}
-```
+The APIs we use restrict the number of requests that can be made within a set timeframe. If this limit is exceeded, the API looping will cease and we will provide the inference from the data we have collected thus far. To see this information, you can check the following parameters included in the response:
+- `incomplete_<item>_results`: Boolean that indicates if the results for `<item>` are incomplete due to reaching the API rate limit.
+- `inference_from_<item>_count`: The number of `<item>` got from the API (before reaching the API rate limit).
