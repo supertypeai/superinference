@@ -1,3 +1,22 @@
+/**
+ * Performs inference on a Github profile
+ *
+ * @param {Object} options - An object that can contain the following:
+ * * @param {string} githubHandle - The Github handle of the user.
+ * * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ * * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
+ * * @param {number} [top_repo_n=3] - The number of top repositories to consider in the statistics. Default is 3.
+ * * @param {number} [top_language_n=3] - Number of top languages to be included in the inference. Default is 3.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with an object contains the following:
+ * * @property {Object} profile - An object that contains the inferred profile data of the user.
+ * * @property {Object} skill - An object that contains the inferred skill data of the user.
+ * * @property {Object} stats - An object that contains the inferred repositories data of the user.
+ * * @property {Object} activity - An object that contains the inferred activity (commit) data of the user.
+ * * @property {Object} contribution - An object that contains the inferred contribution (issues and PR) data of the user.
+ * * @property {Object} closest_user - An object that contains the inferred closest user data of the user.
+ */
+
 import activityInference from "./activityInference";
 import closestUserInference from "./closestUserInference";
 import contributionInference from "./contributionInference";
@@ -31,47 +50,41 @@ const inferFromGithub = async ({
     include_private
   );
 
-  // const { contribution, messageIssue, messagePR } = await contributionInference(
-  //   githubHandle,
-  //   token,
-  //   include_private
-  // );
+  const contribution = await contributionInference(
+    githubHandle,
+    token,
+    include_private
+  );
 
-  // const { activity, mostActiveRepo, messageCommit } = await activityInference(
-  //   githubHandle,
-  //   repos,
-  //   token,
-  //   include_private,
-  //   top_repo_n
-  // );
+  const { activity, topNActiveRepo } = await activityInference(
+    githubHandle,
+    repos,
+    token,
+    include_private,
+    top_repo_n
+  );
 
-  // const { closestUser } = await closestUserInference(
-  //   githubHandle,
-  //   token,
-  //   originalRepo,
-  //   contribution,
-  //   activity,
-  //   closest_user_n,
-  //   messageCommit,
-  //   messageIssue,
-  //   messagePR,
-  //   messageRepo
-  // );
+  const closest_user = await closestUserInference(
+    githubHandle,
+    originalRepo,
+    contribution,
+    activity,
+    token,
+    closest_user_n
+  );
 
-  // stats = {
-  //   ...stats,
-  //   top_repo_commits: mostActiveRepo,
-  //   repo_api_message: messageRepo ? messageRepo : "",
-  //   commit_api_message: messageCommit ? messageCommit : "",
-  // };
+  stats = {
+    ...stats,
+    top_repo_commits: topNActiveRepo,
+  };
 
   return {
     profile,
     skill,
     stats,
-    // activity,
-    // contribution,
-    // closest_user: closestUser,
+    activity,
+    contribution,
+    closest_user,
   };
 };
 

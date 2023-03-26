@@ -1,90 +1,40 @@
-import headerLinkParser from "./utils/headerLinkParser";
+/**
+ * Infers the closest users to a given GitHub user based on:
+ * the number of commits, pull requests, and issues the user gave to or received from other users.
+ * @param {string} githubHandle - The Github handle of the user.
+ * @param {Object} originalRepo - Original repository data (from `repositoryInference()`).
+ * @param {Object} contribution - Contribution inference result (from `contributionInference()`).
+ * @param {Object} activity - Activity inference result (from `activityInference()`).
+ * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ * @param {number} [closest_user_n=3] - The number of closest users to return. Default is 3.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's closest users.
+ * @property {Array} closest_users - The top n closest users based on the total collaboration.
+ * @property {Object.<string, number>} collaboration_count - Containing the total collaboration between the current user with each other users.
+ */
+
+import multipageRequest from "./utils/multipageRequest";
 
 const closestUserInference = async (
   githubHandle,
-  token,
   originalRepo,
   contribution,
   activity,
-  closest_user_n,
-  messageCommit,
-  messageIssue,
-  messagePR,
-  messageRepo
+  token = null,
+  closest_user_n = 3
 ) => {
-  let responseContrib, linksContrib, remainingRateContrib, messageContrib;
-  let dataContrib = [];
+  const dataContrib = [];
 
-  if (token) {
-    // Get all contributors from each repository
-    for (let r of originalRepo) {
-      do {
-        responseContrib = await fetch(
-          linksContrib && linksContrib.next
-            ? linksContrib.next
-            : r.contributors_url,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `token ${token}`,
-            },
-          }
-        );
-
-        const data = await responseContrib.json();
-
-        if (responseContrib.status === 403) {
-          throw new Error(
-            "API rate limit exceeded, please wait an hour before you try again."
-          );
-        } else {
-          dataContrib.push(...data);
-        }
-
-        linksContrib =
-          responseContrib.headers.get("Link") &&
-          headerLinkParser(responseContrib.headers.get("Link"));
-
-        remainingRateContrib = +responseContrib.headers.get(
-          "X-RateLimit-Remaining"
-        );
-      } while (linksContrib?.next && remainingRateContrib > 0);
-    }
-  } else {
-    // Get all contributors from each repository
-    for (let r of originalRepo) {
-      do {
-        responseContrib = await fetch(
-          linksContrib && linksContrib.next
-            ? linksContrib.next
-            : r.contributors_url
-        );
-
-        const data = await responseContrib.json();
-
-        if (responseContrib.status === 403) {
-          throw new Error(
-            "API rate limit exceeded, please wait a few minutes before you try again."
-          );
-        } else {
-          dataContrib.push(...data);
-        }
-
-        linksContrib =
-          responseContrib.headers.get("Link") &&
-          headerLinkParser(responseContrib.headers.get("Link"));
-
-        remainingRateContrib = +responseContrib.headers.get(
-          "X-RateLimit-Remaining"
-        );
-      } while (linksContrib?.next && remainingRateContrib > 0);
-    }
+  // get all contributors from each repository
+  for (let r of originalRepo) {
+    const { dataList: data } = await multipageRequest(
+      r.contributors_url,
+      token
+    );
+    dataContrib.push(...data);
   }
 
-  if (remainingRateContrib === 0 && linksContrib?.next) {
-    messageContrib = `Hey there! Looks like the incoming contributions above are from the latest ${dataContrib.length} repositories since you've reached the API rate limit 😉`;
-  }
-
+  // count the incoming contributions from each user
   let incomingContribution = dataContrib.reduce((result, d) => {
     if (d.login !== githubHandle) {
       result[d.login] = (result[d.login] || 0) + d.contributions;
@@ -92,7 +42,8 @@ const closestUserInference = async (
     return result;
   }, {});
 
-  const usersCount = Object.keys(
+  // count the total number of commits + pr + issue made by each user
+  const collaborationCount = Object.keys(
     contribution.user_contribution_to_other_repo
   ).reduce(
     (result, c) => {
@@ -106,31 +57,32 @@ const closestUserInference = async (
     }
   );
 
-  const totalUsersCount = Object.keys(incomingContribution).reduce(
+  // add incoming contribution to complete the total collaboration count
+  const totalCollaborationCount = Object.keys(incomingContribution).reduce(
     (result, c) => {
       result[c] = (result[c] || 0) + incomingContribution[c];
       return result;
     },
-    usersCount
+    collaborationCount
   );
 
-  const sortedUsersCount = Object.fromEntries(
-    Object.entries(totalUsersCount).sort(([, a], [, b]) => b - a)
+  // sort the collaboration count in descending order
+  const sortedCollaborationCount = Object.fromEntries(
+    Object.entries(totalCollaborationCount).sort(([, a], [, b]) => b - a)
   );
 
-  delete sortedUsersCount[githubHandle];
+  // remove the current user from the collaboration count
+  delete sortedCollaborationCount[githubHandle];
 
   const closestUser = {
-    closest_users: Object.keys(sortedUsersCount).slice(0, closest_user_n),
-    collaboration_count: sortedUsersCount,
-    commit_api_message: messageCommit ? messageCommit : "",
-    issue_api_message: messageIssue ? messageIssue : "",
-    pr_api_message: messagePR ? messagePR : "",
-    repo_api_message: messageRepo ? messageRepo : "",
-    incoming_contribution_api_message: messageContrib ? messageContrib : "",
+    closest_users: Object.keys(sortedCollaborationCount).slice(
+      0,
+      closest_user_n
+    ),
+    collaboration_count: sortedCollaborationCount,
   };
 
-  return { closestUser };
+  return closestUser;
 };
 
 export default closestUserInference;

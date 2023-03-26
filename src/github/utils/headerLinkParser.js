@@ -2,7 +2,9 @@
  * Parses a HTTP Link header and returns an object with key-value pairs for each link.
  *
  * @param {string} header - The Link header string to be parsed.
- * @returns {object} An object containing key-value pairs for each link.
+ *
+ * @returns {Object} Containing key-value pairs for each link.
+ *
  * @throws {Error} If a section in the Link header cannot be split on ';'.
  */
 

@@ -1,9 +1,11 @@
 /**
  * Handles errors returned from a HTTP response.
  *
- * @param {object} response - The HTTP response object.
- * @param {string|null} token - The access token used for the request (default is null).
- * @returns {object} The parsed JSON response data if the response status is 200.
+ * @param {Object} response - The HTTP response object.
+ * @param {string} [token=null] - The access token used for the request. Default is null.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with a parsed JSON response data if the response status is 200.
+ *
  * @throws {Error} If the response status is 401, 403 or other status codes that indicate an error.
  */
 

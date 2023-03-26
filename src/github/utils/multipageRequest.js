@@ -2,11 +2,13 @@
  * Makes multiple requests to a paginated Github API endpoint and returns the combined data.
  *
  * @param {string} url - The URL to request data from. This should be the first page of the data if the data is paginated.
- * @param {string|null} - Github access token to increase API rate limit and access private repositories. Default is null.
- * @returns {Object} Returns an object with the following keys:
- *  - dataList (Array): The combined data from all pages.
- *  - incompleteResults (boolean): Indicates if the results are incomplete due to hitting rate limits.
- *  - totalCount (number): The total count of items for search queries. Only returned for search endpoints.
+ * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
+ *
+ * @returns {Promise<Object>} A Promise that resolves with an object containing information about the requested data.
+ * @property {Array} dataList - The combined data from all pages.
+ * @property {boolean} incompleteResults - Indicates if the results are incomplete due to hitting rate limits.
+ * @property {number} totalCount - The total count of items for search queries. Only returned for search endpoints.
+ *
  * @throws {Error} Throws an error if the request fails or the response status is not 200.
  */
 

@@ -3,6 +3,7 @@
  *
  * @param {string} githubHandle - The Github handle to be verified.
  * @param {string} token - Github access token to be used for authenticated requests.
+ *
  * @throws {Error} If the authenticated Github user doesn't match the provided Github handle.
  */
 
