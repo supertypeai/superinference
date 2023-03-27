@@ -19,7 +19,7 @@ const multipageRequest = async (url, token = null) => {
   let links, remainingRate, totalCount;
   let incompleteResults = false;
   let dataList = [];
-  const search = url.includes("search");
+  const search = /\bsearch\b/.test(url);
 
   do {
     const { response, data } = await request(
@@ -27,10 +27,10 @@ const multipageRequest = async (url, token = null) => {
       token
     );
 
-    if (search) {
+    if (search && data?.items) {
       totalCount = data.total_count;
       dataList.push(...data.items);
-    } else {
+    } else if (data) {
       dataList.push(...data);
     }
 
