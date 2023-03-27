@@ -5,25 +5,20 @@
  * @param {Array} repos - An array containing the user's repositories (from `repositoryInference()`).
  * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
  * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
- * @param {number} [top_repo_n=3] - The number of top repositories to consider in the statistics. Default is 3.
  *
  * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's activities.
- *
- * @property {Object} activity
- * * @property {number} commit_count: The total number of commits all time.
- * * @property {boolean} incomplete_commit_results: Indicates if the results for commits are incomplete due to reaching the API rate limit (exclude the commit_count).
- * * @property {number} inference_from_commit_count:  The number of commits got from the search results (before reaching the API rate limit).
- * * @property {number} weekly_average_commits: The weekly average number of commits.
- * * @property {Object.<string,Array>} commit_count_per_day: Containing the number of commits per day of the week. The value of the object is an array containing two numbers:
- * * * The first number represents the number of commits made on each day in the last 12 months.
- * * * The second number represents the total number of commits made on each day all time.
- * * @property {Object.<string,Array>} commit_count_per_month: Containing the number of commits per month. The value of the object is an array containing two numbers with the same behavior as above.
- * * @property {Object.<string,number>} commit_count_per_owned_repo: Containing the number of commits made to each owned repository.
- * * @property {Object.<string,number>} commit_count_per_other_repo: Containing the number of commits made to each repository not owned by the user.
- * * @property {Object.<string,number>} commit_count_per_repo_org_owner: Containing the number of commits made to each repository owned by an organization.
- * * @property {Object.<string,number>} commit_count_per_repo_user_owner: Containing the number of commits made to each repository owned by another user in the last year.
- *
- * @property {Array.<Object>} topNActiveRepo - An array of the user's top n active repositories based on the number of commits.
+ * @property {number} commit_count: The total number of commits all time.
+ * @property {boolean} incomplete_commit_results: Indicates if the results for commits are incomplete due to reaching the API rate limit (exclude the commit_count).
+ * @property {number} inference_from_commit_count:  The number of commits got from the search results (before reaching the API rate limit).
+ * @property {number} weekly_average_commits: The weekly average number of commits.
+ * @property {Object.<string,Array>} commit_count_per_day: Containing the number of commits per day of the week. The value of the object is an array containing two numbers:
+ * * The first number represents the number of commits made on each day in the last 12 months.
+ * * The second number represents the total number of commits made on each day all time.
+ * @property {Object.<string,Array>} commit_count_per_month: Containing the number of commits per month. The value of the object is an array containing two numbers with the same behavior as above.
+ * @property {Object.<string,number>} commit_count_per_owned_repo: Containing the number of commits made to each owned repository.
+ * @property {Array.<Object>} commit_count_per_other_repo: Containing the number of commits made to each repository not owned by the user and the repository details.
+ * @property {Object.<string,number>} commit_count_per_repo_org_owner: Containing the number of commits made to each repository owned by an organization.
+ * @property {Object.<string,number>} commit_count_per_repo_user_owner: Containing the number of commits made to each repository owned by another user in the last year.
  */
 
 import multipageRequest from "./utils/multipageRequest";
@@ -31,10 +26,8 @@ import usernameTokenCheck from "./utils/usernameTokenCheck";
 
 const activityInference = async (
   githubHandle,
-  repos,
   token = null,
-  include_private = false,
-  top_repo_n = 3
+  include_private = false
 ) => {
   if (include_private) {
     usernameTokenCheck(githubHandle, token);
@@ -56,7 +49,9 @@ const activityInference = async (
       created_at: new Date(c.commit.committer.date).toISOString().slice(0, 10),
       repo_owner: c.repository.owner.login,
       repo_owner_type: c.repository.owner.type,
-      repo_name: c.repository.name,
+      name: c.repository.name,
+      html_url: c.repository.html_url,
+      description: c.repository.description,
     };
   });
 
@@ -75,20 +70,15 @@ const activityInference = async (
       result["month"][cMonth] = result["month"][cMonth] || [0, 0];
       result["month"][cMonth][0] += lastTwelveMonths ? 1 : 0;
       result["month"][cMonth][1] += 1;
-      if (c.repo_owner === githubHandle) {
-        result["owned_repo"][c.repo_name] =
-          (result["owned_repo"][c.repo_name] || 0) + 1;
-      } else {
-        result["other_repo"][c.repo_name] =
-          (result["other_repo"][c.repo_name] || 0) + 1;
-      }
-      if (c.repo_owner_type === "Organization") {
-        result["repo_org_owner"][c.repo_owner] =
-          (result["repo_org_owner"][c.repo_owner] || 0) + 1;
-      } else {
-        result["repo_user_owner"][c.repo_owner] =
-          (result["repo_user_owner"][c.repo_owner] || 0) + 1;
-      }
+      const repoType =
+        c.repo_owner === githubHandle ? "owned_repo" : "other_repo";
+      result[repoType][c.name] = (result[repoType][c.name] || 0) + 1;
+      const ownerType =
+        c.repo_owner_type === "Organization"
+          ? "repo_org_owner"
+          : "repo_user_owner";
+      result[ownerType][c.repo_owner] =
+        (result[ownerType][c.repo_owner] || 0) + 1;
 
       return result;
     },
@@ -115,23 +105,22 @@ const activityInference = async (
     }
   });
 
-  // get the top n active repositories based on total number of commits
-  const topNActiveRepo = Object.keys(sortedCounts["owned_repo"])
-    .slice(0, top_repo_n)
-    .map((repoName) => {
-      const repo = repos.find((r) => r.name === repoName);
-      if (!repo) return null;
-
-      const { name, html_url, description, language } = repo;
-      return {
-        name,
-        html_url,
-        description,
-        top_language: language,
-        commits_count: sortedCounts["owned_repo"][repoName],
-      };
-    })
-    .filter((repo) => repo !== null);
+  // expand commit count to other repo
+  const otherRepoCommits = commits
+    .filter((c) => c.repo_owner !== githubHandle)
+    .reduce((result, c) => {
+      const hasDuplicate = result.some((obj) => obj.name === c.name);
+      if (!hasDuplicate) {
+        result.push({
+          name: c.name,
+          html_url: c.html_url,
+          description: c.description,
+          commits_count: sortedCounts["other_repo"][c.name],
+        });
+      }
+      return result;
+    }, [])
+    .sort((a, b) => b.commits_count - a.commits_count);
 
   // calculate weekly average commits
   const firstCommitDate =
@@ -157,12 +146,12 @@ const activityInference = async (
     commit_count_per_day: sortedCounts["day"],
     commit_count_per_month: sortedCounts["month"],
     commit_count_per_owned_repo: sortedCounts["owned_repo"],
-    commit_count_per_other_repo: sortedCounts["other_repo"],
+    commit_count_per_other_repo: otherRepoCommits,
     commit_count_per_repo_org_owner: sortedCounts["repo_org_owner"],
     commit_count_per_repo_user_owner: sortedCounts["repo_user_owner"],
   };
 
-  return { activity, topNActiveRepo };
+  return activity;
 };
 
 export default activityInference;

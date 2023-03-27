@@ -56,12 +56,10 @@ const inferFromGithub = async ({
     include_private
   );
 
-  const { activity, topNActiveRepo } = await activityInference(
+  const activity = await activityInference(
     githubHandle,
-    repos,
     token,
-    include_private,
-    top_repo_n
+    include_private
   );
 
   const closest_user = await closestUserInference(
@@ -72,11 +70,6 @@ const inferFromGithub = async ({
     token,
     closest_user_n
   );
-
-  stats = {
-    ...stats,
-    top_repo_commits: topNActiveRepo,
-  };
 
   return {
     profile,
