@@ -18,7 +18,6 @@
  * * @property {Array.<Object>} top_repo_stars_forks - The top n repositories based on the number of stars and forks received.
  *
  * @property {Array.<Object>} originalRepo - An array of the user's owned repositories.
- * @property {Array.<Object>} repos - An array of all the user's repositories (owned and forked).
  */
 
 import multipageRequest from "./utils/multipageRequest";
@@ -44,10 +43,16 @@ export const fetchRepo = async (
     token
   );
 
-  repos.sort(
-    (a, b) =>
-      b.stargazers_count + b.forks_count - (a.stargazers_count + a.forks_count)
-  );
+  repos.sort((a, b) => {
+    const totalCountB = b.stargazers_count + b.forks_count;
+    const totalCountA = a.stargazers_count + a.forks_count;
+
+    if (totalCountB !== totalCountA) {
+      return totalCountB - totalCountA;
+    } else {
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
+  });
 
   // separate original and forked repositories
   const originalRepo = [];
@@ -102,7 +107,7 @@ const repositoryInference = async (
     top_repo_stars_forks: popularRepo,
   };
 
-  return { stats, originalRepo, repos };
+  return { stats, originalRepo };
 };
 
 export default repositoryInference;

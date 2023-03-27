@@ -52,7 +52,8 @@ const skillInference = async (
     : "";
 
   const { data } = await request(
-    `/repos/${githubHandle}/${githubHandle}/contents/README.md`
+    `/repos/${githubHandle}/${githubHandle}/contents/README.md`,
+    token
   );
   const decodedReadme =
     data && data.content

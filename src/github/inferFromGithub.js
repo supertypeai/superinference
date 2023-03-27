@@ -31,7 +31,7 @@ const inferFromGithub = async ({
 } = {}) => {
   const profile = await profileInference(githubHandle, token);
 
-  let { stats, originalRepo, repos } = await repositoryInference(
+  let { stats, originalRepo } = await repositoryInference(
     githubHandle,
     token,
     include_private,

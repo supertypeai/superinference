@@ -157,20 +157,16 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     "commit_count_per_other_repo": [
         {
            "name": "generations-frontend",
+           "owner": "onlyphantom",
            "html_url": "https://github.com/onlyphantom/generations-frontend",
            "description": "Front end for Fellowship by @supertypeai",
            "commits_count": 70
         },
         {
            "name": "superinference",
-           "html_url": "https://github.com/supertypeai/superinference",
+           "owner": "supertypeai",
            ...
         },
-        {
-           "name": "CookInd",
-           "html_url": "https://github.com/Tech4Impact-21-22/CookInd",
-           ...
-        }
     ],
     "commit_count_per_repo_org_owner": { 
         "supertypeai": 144,
@@ -190,13 +186,14 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     "inference_from_issue_count": 2,
     "inference_from_pr_count": 151,
     "merged_pr_count": 108,
-    "user_contribution_to_other_repo": {
+    "self_contribution_to_external": {
         "onlyphantom": 109,
         "supertypeai": 67,
         ...
     },
     // incoming contribution count (commits and pull requests from other users)
-    "other_contribution_to_user_repo": {
+    // only based on the top and latest 10 repositories
+    "external_contribution_to_self": {
         "geraldbryan": 42
     }
 }

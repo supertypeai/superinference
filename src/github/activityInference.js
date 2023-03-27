@@ -113,6 +113,7 @@ const activityInference = async (
       if (!hasDuplicate) {
         result.push({
           name: c.name,
+          owner: c.repo_owner,
           html_url: c.html_url,
           description: c.description,
           commits_count: sortedCounts["other_repo"][c.name],

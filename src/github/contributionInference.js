@@ -12,8 +12,8 @@
  * @property {number} inference_from_issue_count - The number of issues got from the search results (before reaching the API rate limit).
  * @property {number} inference_from_pr_count - The number of PR got from the search results (before reaching the API rate limit).
  * @property {number} merged_pr_count - The number of PR to other repo that have been merged.
- * @property {Object.<string, number>} user_contribution_to_other_repo - Containing the user's contribution count (issue + PR) per repository owner.
- * @property {Object.<string, number>} other_contribution_to_user_repo - Containing each other users' contribution count (commit + PR) to the current user's repository.
+ * @property {Object.<string, number>} self_contribution_to_external - Containing the user's contribution count (issue + PR) per repository owner.
+ * @property {Object.<string, number>} external_contribution_to_self - Containing each other users' contribution count (commit + PR) to the current user's top and latest 10 repositories.
  */
 
 import multipageRequest from "./utils/multipageRequest";
@@ -77,8 +77,8 @@ const contributionInference = async (
   // incoming contribution
   const dataContrib = [];
 
-  // get all contributors from each repository
-  for (let r of originalRepo) {
+  // get all contributors from the top 10 repositories
+  for (let r of originalRepo.slice(0, 10)) {
     const { dataList: data } = await multipageRequest(
       r.contributors_url,
       token
@@ -103,8 +103,8 @@ const contributionInference = async (
     inference_from_issue_count: dataIssue.length,
     inference_from_pr_count: dataPR.length,
     merged_pr_count: mergedPRCount,
-    user_contribution_to_other_repo: sortedContributionCount,
-    other_contribution_to_user_repo: sortedIncomingContribution,
+    self_contribution_to_external: sortedContributionCount,
+    external_contribution_to_self: sortedIncomingContribution,
   };
 
   return contribution;
