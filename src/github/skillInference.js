@@ -93,13 +93,13 @@ const skillInference = async (
   ];
 
   // language inference
-  const languages = await languageInference(
+  const languages = await languageInference({
     githubHandle,
     token,
     include_private,
     originalRepo,
-    top_language_n
-  );
+    top_language_n,
+  });
 
   return {
     inference_from_originalrepo_count: originalRepo.length,

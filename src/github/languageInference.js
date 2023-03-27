@@ -13,6 +13,7 @@
  */
 
 import request from "./utils/request";
+import usernameTokenCheck from "./utils/usernameTokenCheck";
 import { fetchRepo } from "./repositoryInference";
 
 const languageInference = async ({
@@ -22,6 +23,10 @@ const languageInference = async ({
   originalRepo = null,
   top_language_n = 3,
 } = {}) => {
+  if (include_private) {
+    usernameTokenCheck(githubHandle, token);
+  }
+
   let repos = [];
 
   // get the current user's owned repositories if no originalRepo is provided
