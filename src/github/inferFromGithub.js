@@ -14,11 +14,9 @@
  * * @property {Object} stats - An object that contains the inferred repositories data of the user.
  * * @property {Object} activity - An object that contains the inferred activity (commit) data of the user.
  * * @property {Object} contribution - An object that contains the inferred contribution (issues and PR) data of the user.
- * * @property {Object} closest_user - An object that contains the inferred closest user data of the user.
  */
 
 import activityInference from "./activityInference";
-import closestUserInference from "./closestUserInference";
 import contributionInference from "./contributionInference";
 import profileInference from "./profileInference";
 import repositoryInference from "./repositoryInference";
@@ -30,7 +28,6 @@ const inferFromGithub = async ({
   include_private = false,
   top_repo_n = 3,
   top_language_n = 3,
-  closest_user_n = 3,
 } = {}) => {
   const profile = await profileInference(githubHandle, token);
 
@@ -52,6 +49,7 @@ const inferFromGithub = async ({
 
   const contribution = await contributionInference(
     githubHandle,
+    originalRepo,
     token,
     include_private
   );
@@ -62,22 +60,12 @@ const inferFromGithub = async ({
     include_private
   );
 
-  const closest_user = await closestUserInference(
-    githubHandle,
-    originalRepo,
-    contribution,
-    activity,
-    token,
-    closest_user_n
-  );
-
   return {
     profile,
     skill,
     stats,
     activity,
     contribution,
-    closest_user,
   };
 };
 

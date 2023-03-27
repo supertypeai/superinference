@@ -40,10 +40,10 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 import { inferFromDevto, inferFromGithub } from "superinference";
 
 // using then
-let profile, skill, stats, activity, contribution, closest_user, bio;
+let profile, skill, stats, activity, contribution, bio;
 inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     // do something with the data, such as setting states or updating UI
-    ({ profile, skill, stats, activity, contribution, closest_user, bio } = data);
+    ({ profile, skill, stats, activity, contribution, bio } = data);
 });
     
 inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
@@ -51,12 +51,12 @@ inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
 })
 
 // using await 
-const { profile, skill, stats, activity, contribution, closest_user } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
+const { profile, skill, stats, activity, contribution } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
     
 const bio = await inferFromDevto({ devtoHandle:"onlyphantom" });
 ```
 
-Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `contribution`, `closest_user` and `bio` created from the two function calls above:
+Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `contribution`, and `bio` created from the two function calls above:
 
 ```js
 // profile
@@ -80,7 +80,9 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     "inference_from_originalrepo_count": 17,
     "key_qualifications": [ "consultancy", "full-stack-developer" ],
     "top_n_languages": [ "html", "javascript", "python" ],
-    "languages_percentage": {
+    "languages_percentage": { 
+        // only available for authorized request
+        // otherwise will return null
         "html": "0.500",
         "javascript": "0.333",
         "python": "0.278",
@@ -115,25 +117,6 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         {
           "name": "cryptocurrency",
           "html_url": "https://github.com/AurelliaChristie/cryptocurrency",
-          ...
-        }
-    ],
-    "top_repo_commits": [
-        {
-          "name": "CookInd",
-          "html_url": "https://github.com/Tech4Impact-21-22/CookInd",
-          "description": null,
-          "top_language": "HTML",
-          "commits_count": 34
-        },
-        {
-          "name": "Ad-Fatigued-List-Generator",
-          "html_url": "https://github.com/AurelliaChristie/Ad-Fatigued-List-Generator",
-          ...
-        },
-        {
-          "name": "BeautIndonesia",
-          "html_url": "https://github.com/AurelliaChristie/BeautIndonesia",
           ...
         }
     ]
@@ -171,12 +154,28 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "Ad-Fatigued-List-Generator": 30,
         ...
     },
-    "commit_count_per_other_repo": {
-        "generations-frontend": 70,
-        "MAL": 27,
-        ...
+    "commit_count_per_other_repo": [
+        {
+           "name": "generations-frontend",
+           "html_url": "https://github.com/onlyphantom/generations-frontend",
+           "description": "Front end for Fellowship by @supertypeai",
+           "commits_count": 70
+        },
+        {
+           "name": "superinference",
+           "html_url": "https://github.com/supertypeai/superinference",
+           ...
+        },
+        {
+           "name": "CookInd",
+           "html_url": "https://github.com/Tech4Impact-21-22/CookInd",
+           ...
+        }
+    ],
+    "commit_count_per_repo_org_owner": { 
+        "supertypeai": 144,
+        "Tech4Impact-21-22": 65 
     },
-    "commit_count_per_repo_org_owner": { "supertypeai": 144, "Tech4Impact-21-22": 65 },
     "commit_count_per_repo_user_owner": {
         "AurelliaChristie": 200,
         "onlyphantom": 175,
@@ -195,17 +194,10 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
         "onlyphantom": 109,
         "supertypeai": 67,
         ...
-    }
-}
-
-// closest_user (based on the total commits, issues, and pull requests the user gave to and received from other users)
-{
-    "closest_users": [ "onlyphantom", "supertypeai", "Tech4Impact-21-22" ],
-    "collaboration_count": {
-        "onlyphantom": 284,
-        "supertypeai": 211,
-        "Tech4Impact-21-22": 99,
-        ...
+    },
+    // incoming contribution count (commits and pull requests from other users)
+    "other_contribution_to_user_repo": {
+        "geraldbryan": 42
     }
 }
 
@@ -231,13 +223,15 @@ The calls in the code example above are unauthorized requests, so it collects da
 You can optionally pass in an OAuth token to make authenticated requests to, in the case of GitHub, also be able to extract and infer stats from private repositories not available to the public.
 
 ```js
-inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, include_private:true, top_repo_n:10, top_language_n:5, closest_user_n:5 })
+inferFromGithub({ githubHandle:"onlyphantom", token:oauth_token, include_private:true, top_repo_n:10, top_language_n:5 })
 ```
 
-This returns the top 10 repositories, including private ones, the top 5 languages, and the closest 5 users using a GitHub OAuth token.
+This returns the top 10 repositories, including private ones, and the top 5 languages using a GitHub OAuth token.
 
 ### API Rate Limit
 
 The APIs we use restrict the number of requests that can be made within a set timeframe. If this limit is exceeded, the API looping will cease and we will provide the inference from the data we have collected thus far. To see this information, you can check the following parameters included in the response:
 - `incomplete_<item>_results`: Boolean that indicates if the results for `<item>` are incomplete due to reaching the API rate limit.
 - `inference_from_<item>_count`: The number of `<item>` got from the API (before reaching the API rate limit).
+
+**Special notes for GitHub API : the API can only return maximum 1,000 results (10 pages) per endpoint. Thus there will be a case where you see the `incomplete_<item>_results` set to `false` while the `inference_from_<item>_count` set to `1,000` even though there supposed to be more than 1,000 `<items>`.**
