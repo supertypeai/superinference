@@ -8,8 +8,8 @@
  * * @param {Object} [originalRepo=null] - Original repository data (from `repositoryInference()`). Default is null.
  *
  * @returns {Promise<Object>} A Promise that resolves to an object containing information about the user's programming languages.
+ * @property {Array} top_n_languages - The top n programming languages used in the GitHub user's owned repositories.
  * @property {Object.<string, number>} languages_percentage - Maps each programming language used across all of the user's repositories to its percentage of usage, sorted in descending order by percentage. Only available for authorized request.
- * @property {Object.<string, number>} sortedLanguagesCount - Maps each language to its count, sorted in descending order by count. If the request includes an authorization token, this property is omitted.
  */
 
 import request from "./utils/request";
@@ -20,6 +20,7 @@ const languageInference = async ({
   token = null,
   include_private = false,
   originalRepo = null,
+  top_language_n = 3,
 } = {}) => {
   let repos = [];
 
@@ -69,10 +70,6 @@ const languageInference = async ({
       },
       {}
     );
-
-    return {
-      languages_percentage: languagesPercentage,
-    };
   } else {
     // count and sort the number of times each language becomes a top language if no token is provided
     const languagesCount = repos.reduce((result, r) => {
@@ -86,12 +83,18 @@ const languageInference = async ({
     sortedLanguagesCount = Object.fromEntries(
       Object.entries(languagesCount).sort(([, a], [, b]) => b - a)
     );
-
-    return {
-      languages_percentage: null,
-      sortedLanguagesCount,
-    };
   }
+
+  // find top n languages
+  const topNLanguages = Object.keys(sortedLanguagesCount).slice(
+    0,
+    top_language_n
+  );
+
+  return {
+    top_n_languages: topNLanguages,
+    languages_percentage: languagesPercentage || null,
+  };
 };
 
 export default languageInference;

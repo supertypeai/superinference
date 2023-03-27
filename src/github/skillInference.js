@@ -92,36 +92,19 @@ const skillInference = async (
     ...new Set([...keywordsFromValues, ...keywordsFromLabels]),
   ];
 
-  // calculate languages percentage and find top n languages
-  let languagesPercentage, topNLanguages;
-  if (token) {
-    const { languages_percentage } = await languageInference({
-      githubHandle: githubHandle,
-      token: token,
-      include_private: include_private,
-      originalRepo: originalRepo,
-    });
-
-    languagesPercentage = languages_percentage;
-    topNLanguages = Object.keys(languagesPercentage).slice(0, top_language_n);
-  } else {
-    const { languages_percentage, sortedLanguagesCount } =
-      await languageInference({
-        githubHandle: githubHandle,
-        token: token,
-        include_private: include_private,
-        originalRepo: originalRepo,
-      });
-
-    languagesPercentage = languages_percentage;
-    topNLanguages = Object.keys(sortedLanguagesCount).slice(0, top_language_n);
-  }
+  // language inference
+  const languages = await languageInference(
+    githubHandle,
+    token,
+    include_private,
+    originalRepo,
+    top_language_n
+  );
 
   return {
     inference_from_originalrepo_count: originalRepo.length,
     key_qualifications: keyQualifications,
-    top_n_languages: topNLanguages,
-    languages_percentage: languagesPercentage,
+    ...languages,
   };
 };
 
