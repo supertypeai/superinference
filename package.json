@@ -1,6 +1,6 @@
 {
   "name": "superinference",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "Swiss army knife for inferring analysis-ready attributes from API endpoints and returning them as JSON objects",
   "main": "dist/index.js",
   "scripts": {
