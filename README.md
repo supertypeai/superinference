@@ -13,7 +13,7 @@ It supports both token-based (OAuth) authorization for authenticated requests an
 - [ ] WordPress
 
 ### Live Demo:
-Use [this codesandbox](m5y2qx-3000.csb.app/) to quickly experiment with Superinference. A [python library of Superinference](https://github.com/supertypeai/superinference-py) is also available and maintained by [tmtsmrsl](https://github.com/tmtsmrsl).
+Use [this codesandbox](https://bit.ly/superinference) to quickly experiment with Superinference. A [python library of Superinference](https://github.com/supertypeai/superinference-py) is also available and maintained by [tmtsmrsl](https://github.com/tmtsmrsl).
 
 ### Use Cases
 
