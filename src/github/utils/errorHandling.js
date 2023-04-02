@@ -9,9 +9,21 @@
  * @throws {Error} If the response status is 401, 403 or other status codes that indicate an error.
  */
 
-const errorHandling = async (response, token) => {
+const errorHandling = async (response, token, graphql = false) => {
   if (response.status === 200) {
-    return await response.json();
+    if (graphql) {
+      const parsedResponse = await response.json();
+      if (parsedResponse.errors && parsedResponse.errors[0]["message"]) {
+        throw new Error(
+          `GraphQL API query error - "${parsedResponse.errors[0]["message"]}"`
+        );
+      } else {
+        const { data } = parsedResponse;
+        return data;
+      }
+    } else {
+      return await response.json();
+    }
   } else if (response.status === 401) {
     if (token) {
       throw new Error(
