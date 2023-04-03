@@ -70,7 +70,9 @@ const languageInference = async ({
     // calculate the percentage of repositories that use each language
     languagesPercentage = Object.keys(sortedLanguagesCount).reduce(
       (result, key) => {
-        result[key] = (sortedLanguagesCount[key] / repos.length).toFixed(3);
+        result[key] = parseFloat(
+          (sortedLanguagesCount[key] / repos.length).toFixed(3)
+        );
         return result;
       },
       {}
