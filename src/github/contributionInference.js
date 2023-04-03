@@ -1,77 +1,274 @@
 /**
- * Infers a user's contributions (issue + PR) to repositories on GitHub.
+ * Infers a user's contributions to repositories on GitHub.
  *
  * @param {string} githubHandle - The Github handle of the user.
+ * @param {string} token - Github access token to increase API rate limit and access private repositories.
+ * @param {string} createdProfileDate - The user's Github profile creation date (from `profileInference()`).
  * @param {Object} originalRepo - Original repository data (from `repositoryInference()`).
- * @param {string} [token=null] - Github access token to increase API rate limit and access private repositories. Default is null.
- * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
  *
  * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's contribution.
- * @property {boolean} incomplete_issue_results - Indicates if the results for issues are incomplete due to reaching the API rate limit.
- * @property {boolean} incomplete_pr_results - Indicates if the results for PR are incomplete due to reaching the API rate limit.
- * @property {number} inference_from_issue_count - The number of issues got from the search results (before reaching the API rate limit).
- * @property {number} inference_from_pr_count - The number of PR got from the search results (before reaching the API rate limit).
- * @property {number} merged_pr_count - The number of PR to other repo that have been merged.
- * @property {Object.<string, number>} self_contribution_to_external - Containing the user's contribution count (issue + PR) per repository owner.
- * @property {Object.<string, number>} external_contribution_to_self - Containing each other users' contribution count (commit + PR) to the current user's top and latest 10 repositories.
+ * @property {number} contribution_count: The total number of contributions all time.
+ * @property {number} weekly_average_contribution: The weekly average number of contributions.
+ * @property {Object.<string,Array>} contribution_count_per_day: Containing the number of contributions per day of the week. The value of the object is an array containing two numbers:
+ * * The first number represents the number of contributions made on each day in the last 12 months.
+ * * The second number represents the total number of contributions made on each day all time.
+ * @property {Object.<string,Array>} contribution_count_per_month: Containing the number of contributions per month. The value of the object is an array containing two numbers with the same behavior as above.
+ * The following properties (except the external_contribution_to_top_10_repo) are inferred from the top 100 repos per year based on the total contributions count:
+ * @property {Object.<string,number>} contribution_count_per_owned_repo: Containing the number of contributions made to each owned repository.
+ * @property {Array.<Object>} contribution_count_per_other_repo: Containing the number of contributions made to each repository not owned by the user and the repository details.
+ * @property {Object.<string,number>} contribution_count_per_repo_org_owner: Containing the number of contributions made to each repository owned by an organization.
+ * @property {Object.<string,number>} contribution_count_per_repo_user_owner: Containing the number of contributions made to each repository owned by another user.
+ * @property {Object.<string, number>} external_contribution_to_top_10_repo - Containing each other users' contribution count to the current user's top and latest 10 repositories.
  */
 
+import graphqlRequest from "./utils/graphqlRequest";
 import multipageRequest from "./utils/multipageRequest";
-import usernameTokenCheck from "./utils/usernameTokenCheck";
 
 const contributionInference = async (
   githubHandle,
-  originalRepo,
-  token = null,
-  include_private = false
+  token,
+  createdProfileDate,
+  originalRepo
 ) => {
-  if (include_private) {
-    usernameTokenCheck(githubHandle, token);
+  // return null if no token is provided
+  if (!token) {
+    return null;
   }
 
-  // get all issues and PR from the current user
-  const urlPattern = (type) =>
-    `/search/issues?q=type:${type}+author:${githubHandle}${
-      include_private ? "" : "+is:public"
-    }&sort=author-date&order=desc&per_page=100`;
-  const issueURL = urlPattern("issue");
-  const prURL = urlPattern("pr");
+  // get full year of createdProfileDate & today
+  const createdYear = new Date(createdProfileDate).getFullYear();
+  const today = new Date();
+  const currentYear = today.getFullYear();
 
-  const { dataList: dataIssue, incompleteResults: incompleteIssueResults } =
-    await multipageRequest(issueURL, token);
-  const { dataList: dataPR, incompleteResults: incompletePRResults } =
-    await multipageRequest(prURL, token);
-
-  // extract the useful information from issues and PR data
-  const extractRepoOwner = (item) => {
-    const splitURL = item.html_url.split("/");
-    return {
-      repo_owner: splitURL[3],
-    };
+  // get contributions per day and per repo from the API
+  const queryPatternDay = (githubHandle, startDate, endDate) => {
+    return `query {
+        user(login: "${githubHandle}") {
+          contributionsCollection(from: "${new Date(
+            startDate
+          ).toISOString()}", to: "${new Date(endDate).toISOString()}") {
+            contributionCalendar {
+              totalContributions
+              weeks {
+                contributionDays {
+                  date
+                  contributionCount
+                }
+              }
+            }
+          }
+        }
+      }`;
   };
 
-  const extractPRInfo = (item) => ({
-    merged_at: item.pull_request.merged_at,
-    ...extractRepoOwner(item),
+  const contributionDetail = `repository {
+    description
+    name
+    url
+    languages(first: 1, orderBy: {field: SIZE, direction: DESC}) {
+        nodes {
+            name
+        }
+    }
+    owner {
+        __typename
+        ... on User {
+        login
+        }
+        ... on Organization {
+        login
+        }
+    }
+  } contributions {
+    totalCount
+  }`;
+  const queryPatternRepo = (githubHandle, startDate, endDate) => {
+    return `query {
+        user(login: "${githubHandle}") {
+          contributionsCollection(from: "${new Date(
+            startDate
+          ).toISOString()}", to: "${new Date(endDate).toISOString()}") {
+            commitContributionsByRepository(maxRepositories: 100) {
+              ${contributionDetail}    
+            }
+            issueContributionsByRepository(maxRepositories: 100) {
+              ${contributionDetail}
+            }
+            pullRequestContributionsByRepository(maxRepositories: 100) {
+              ${contributionDetail}
+            }
+            pullRequestReviewContributionsByRepository(maxRepositories: 100) {
+              ${contributionDetail}
+            }
+          }
+        }
+      }`;
+  };
+
+  let contributionsPerDay = [];
+  let contributionsPerRepo = [];
+  let contributionsCount = 0;
+  for (let i = createdYear; i <= currentYear; i++) {
+    let queryDay, queryRepo;
+    if (i === createdYear) {
+      queryDay = queryPatternDay(
+        githubHandle,
+        createdProfileDate,
+        `${i}-12-31`
+      );
+      queryRepo = queryPatternRepo(
+        githubHandle,
+        createdProfileDate,
+        `${i}-12-31`
+      );
+    } else if (i === currentYear) {
+      queryDay = queryPatternDay(githubHandle, `${i}-01-01`, today);
+      queryRepo = queryPatternRepo(githubHandle, `${i}-01-01`, today);
+    } else {
+      queryDay = queryPatternDay(githubHandle, `${i}-01-01`, `${i}-12-31`);
+      queryRepo = queryPatternRepo(githubHandle, `${i}-01-01`, `${i}-12-31`);
+    }
+
+    const dataDay = await graphqlRequest(queryDay, token);
+    const newContributionDay =
+      dataDay.user.contributionsCollection.contributionCalendar.weeks
+        .map((item) => item.contributionDays)
+        .reduce((acc, cur) => acc.concat(cur), []);
+    contributionsPerDay = contributionsPerDay.concat(newContributionDay);
+    contributionsCount +=
+      dataDay.user.contributionsCollection.contributionCalendar
+        .totalContributions;
+
+    const dataRepo = await graphqlRequest(queryRepo, token);
+    const extractRepoDetail = (repository, contributions) => {
+      return {
+        name: repository.name,
+        owner: repository.owner.login,
+        owner_type: repository.owner["__typename"],
+        html_url: repository.url,
+        description: repository.description,
+        top_language: repository.languages.nodes[0]
+          ? repository.languages.nodes[0].name.toLowerCase().replace(/ /g, "-")
+          : null,
+        contributions_count: contributions.totalCount,
+      };
+    };
+    const newCommits =
+      dataRepo.user.contributionsCollection.commitContributionsByRepository.map(
+        ({ repository, contributions }) => {
+          return extractRepoDetail(repository, contributions);
+        }
+      );
+    const newIssues =
+      dataRepo.user.contributionsCollection.issueContributionsByRepository.map(
+        ({ repository, contributions }) => {
+          return extractRepoDetail(repository, contributions);
+        }
+      );
+    const newPR =
+      dataRepo.user.contributionsCollection.pullRequestContributionsByRepository.map(
+        ({ repository, contributions }) => {
+          return extractRepoDetail(repository, contributions);
+        }
+      );
+    const newPRReview =
+      dataRepo.user.contributionsCollection.pullRequestReviewContributionsByRepository.map(
+        ({ repository, contributions }) => {
+          return extractRepoDetail(repository, contributions);
+        }
+      );
+    contributionsPerRepo = contributionsPerRepo.concat([
+      ...newCommits,
+      ...newIssues,
+      ...newPR,
+      ...newPRReview,
+    ]);
+  }
+
+  // count number of contributions per day and month
+  const oneYearAgo = new Date().setFullYear(new Date().getFullYear() - 1);
+  const count = contributionsPerDay.reduce(
+    (result, c) => {
+      const cDay = new Date(c.date).toString().split(" ")[0];
+      const cMonth = new Date(c.date).toString().split(" ")[1];
+      const lastTwelveMonths = new Date(c.date) >= oneYearAgo;
+
+      result["day"][cDay] = result["day"][cDay] || [0, 0];
+      result["day"][cDay][0] += lastTwelveMonths ? c.contributionCount : 0;
+      result["day"][cDay][1] += c.contributionCount;
+      result["month"][cMonth] = result["month"][cMonth] || [0, 0];
+      result["month"][cMonth][0] += lastTwelveMonths ? c.contributionCount : 0;
+      result["month"][cMonth][1] += c.contributionCount;
+      return result;
+    },
+    {
+      day: {},
+      month: {},
+    }
+  );
+
+  // count number of contributions per repo and repo owner
+  const finalCount = contributionsPerRepo.reduce(
+    (result, c) => {
+      const repoType = c.owner === githubHandle ? "owned_repo" : "other_repo";
+
+      if (repoType === "owned_repo") {
+        result[repoType][c.name] =
+          (result[repoType][c.name] || 0) + c.contributions_count;
+      } else {
+        const index = result[repoType].findIndex((obj) => obj.name === c.name);
+
+        if (index === -1) {
+          const { owner_type, ...data } = c;
+          result[repoType].push(data);
+        } else {
+          result[repoType][index] = {
+            ...result[repoType][index],
+            contributions_count:
+              result[repoType][index].contributions_count +
+              c.contributions_count,
+          };
+        }
+      }
+
+      result[c.owner_type][c.owner] =
+        (result[c.owner_type][c.owner] || 0) + c.contributions_count;
+
+      return result;
+    },
+    {
+      ...count,
+      owned_repo: {},
+      other_repo: [],
+      User: {},
+      Organization: {},
+    }
+  );
+
+  // sort final count
+  let sortedCount = {};
+  Object.keys(finalCount).forEach((k) => {
+    if (k === "day" || k === "month") {
+      sortedCount[k] = Object.fromEntries(
+        Object.entries(finalCount[k]).sort((a, b) => b[1][0] - a[1][0])
+      );
+    } else if (k === "other_repo") {
+      sortedCount[k] = finalCount[k].sort(
+        (a, b) => b.contributions_count - a.contributions_count
+      );
+    } else {
+      sortedCount[k] = Object.fromEntries(
+        Object.entries(finalCount[k]).sort(([, a], [, b]) => b - a)
+      );
+    }
   });
 
-  const issues = dataIssue
-    .filter((i) => i.author_association !== "OWNER")
-    .map(extractRepoOwner);
-  const pr = dataPR
-    .filter((p) => p.author_association !== "OWNER")
-    .map(extractPRInfo);
-
-  // count the number of PR to other repo that have been merged
-  const mergedPRCount = pr.filter((p) => p.merged_at).length;
-
-  // count and sort number of the current user's contribution (issues + PR) per each repo owner
-  const contributionCount = [...issues, ...pr].reduce((result, item) => {
-    result[item.repo_owner] = (result[item.repo_owner] || 0) + 1;
-    return result;
-  }, {});
-  const sortedContributionCount = Object.fromEntries(
-    Object.entries(contributionCount).sort(([, a], [, b]) => b - a)
+  // calculate weekly average contributions
+  const totalWeeks = Math.floor(
+    (today - new Date(createdProfileDate)) / (7 * 24 * 60 * 60 * 1000)
+  );
+  const weeklyAvgContributions = parseFloat(
+    (contributionsCount / totalWeeks).toFixed(3)
   );
 
   // incoming contribution
@@ -98,13 +295,15 @@ const contributionInference = async (
   );
 
   const contribution = {
-    incomplete_issue_results: incompleteIssueResults,
-    incomplete_pr_results: incompletePRResults,
-    inference_from_issue_count: dataIssue.length,
-    inference_from_pr_count: dataPR.length,
-    merged_pr_count: mergedPRCount,
-    self_contribution_to_external: sortedContributionCount,
-    external_contribution_to_self: sortedIncomingContribution,
+    contribution_count: contributionsCount,
+    weekly_average_contribution: weeklyAvgContributions,
+    contribution_count_per_day: sortedCount["day"],
+    contribution_count_per_month: sortedCount["month"],
+    contribution_count_per_owned_repo: sortedCount["owned_repo"],
+    contribution_count_per_other_repo: sortedCount["other_repo"],
+    contribution_count_per_repo_org_owner: sortedCount["Organization"],
+    contribution_count_per_repo_user_owner: sortedCount["User"],
+    external_contribution_to_top_10_repo: sortedIncomingContribution,
   };
 
   return contribution;

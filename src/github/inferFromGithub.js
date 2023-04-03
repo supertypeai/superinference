@@ -12,11 +12,9 @@
  * * @property {Object} profile - An object that contains the inferred profile data of the user.
  * * @property {Object} skill - An object that contains the inferred skill data of the user.
  * * @property {Object} stats - An object that contains the inferred repositories data of the user.
- * * @property {Object} activity - An object that contains the inferred activity (commit) data of the user.
- * * @property {Object} contribution - An object that contains the inferred contribution (issues and PR) data of the user.
+ * * @property {Object} contribution - An object that contains the inferred contribution data of the user.
  */
 
-import activityInference from "./activityInference";
 import contributionInference from "./contributionInference";
 import profileInference from "./profileInference";
 import repositoryInference from "./repositoryInference";
@@ -29,7 +27,7 @@ const inferFromGithub = async ({
   top_repo_n = 3,
   top_language_n = 3,
 } = {}) => {
-  const profile = await profileInference(githubHandle, token);
+  const { profile, created_at } = await profileInference(githubHandle, token);
 
   let { stats, originalRepo } = await repositoryInference(
     githubHandle,
@@ -49,22 +47,15 @@ const inferFromGithub = async ({
 
   const contribution = await contributionInference(
     githubHandle,
-    originalRepo,
     token,
-    include_private
-  );
-
-  const activity = await activityInference(
-    githubHandle,
-    token,
-    include_private
+    created_at,
+    originalRepo
   );
 
   return {
     profile,
     skill,
     stats,
-    activity,
     contribution,
   };
 };
