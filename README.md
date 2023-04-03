@@ -40,10 +40,10 @@ There is nothing magic here. Superinference is just a wrapper around the social 
 import { inferFromDevto, inferFromGithub } from "superinference";
 
 // using then
-let profile, skill, stats, activity, contribution, bio;
+let profile, skill, stats, contribution, bio;
 inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     // do something with the data, such as setting states or updating UI
-    ({ profile, skill, stats, activity, contribution, bio } = data);
+    ({ profile, skill, stats, contribution } = data);
 });
     
 inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
@@ -51,12 +51,12 @@ inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
 })
 
 // using await 
-const { profile, skill, stats, activity, contribution } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
+const { profile, skill, stats, contribution } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
     
 const bio = await inferFromDevto({ devtoHandle:"onlyphantom" });
 ```
 
-Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `contribution`, and `bio` created from the two function calls above:
+Here is the sample result for each of `profile`, `skill`, `stats`, `contribution`, and `bio` created from the two function calls above:
 
 ```js
 // profile
@@ -83,12 +83,12 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     "languages_percentage": { 
         // only available for authorized request
         // otherwise will return null
-        "html": "0.500",
-        "javascript": "0.333",
-        "python": "0.278",
-        "css": "0.222",
-        "r": "0.111",
-        "jupyter-notebook": "0.056"
+        "html": 0.500,
+        "javascript": 0.333,
+        "python": 0.278,
+        "css": 0.222,
+        "r": 0.111,
+        "jupyter-notebook": 0.056
     }
 }
 
@@ -122,80 +122,85 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `activity`, `
     ]
 }
 
-// activity (commits)
+// contribution (only available for authorized request, otherwise will return null)
 {
-    "commit_count": 433,
-    "incomplete_commit_results": false,
-    "inference_from_commit_count": 433,
-    "weekly_average_commits": "3.639",
-    "commit_count_per_day": {
-        "Wed": [ 48, 81 ], // the first value represents the commit counts in the last 12 months, while the second value represents the commit counts of all time
-        "Thu": [ 41, 87 ],
-        "Mon": [ 29, 57 ],
-        "Fri": [ 26, 80 ],
-        "Tue": [ 26, 70 ],
-        "Sat": [ 2, 22 ],
-        "Sun": [ 0, 36 ]
-    },
-    "commit_count_per_month": {
-        "Mar": [ 62, 63 ], // the first value represents the commit counts in the last 12 months, while the second value represents the commit counts of all time
-        "Feb": [ 33, 33 ],
-        "Jun": [ 23, 23 ],
-        "Aug": [ 15, 19 ],
-        "Jul": [ 14, 29 ],
-        "Oct": [ 12, 122 ],
-        "Sep": [ 7, 34 ],
-        "Nov": [ 3, 34 ],
-        "Jan": [ 2, 52 ],
-        "Dec": [ 1, 24 ]
-    },
-    "commit_count_per_owned_repo": {
-        "CookInd": 34,
-        "Ad-Fatigued-List-Generator": 30,
-        ...
-    },
-    "commit_count_per_other_repo": [
-        {
-           "name": "generations-frontend",
-           "owner": "onlyphantom",
-           "html_url": "https://github.com/onlyphantom/generations-frontend",
-           "description": "Front end for Fellowship by @supertypeai",
-           "commits_count": 70
-        },
-        {
-           "name": "superinference",
-           "owner": "supertypeai",
-           ...
-        },
-    ],
-    "commit_count_per_repo_org_owner": { 
-        "supertypeai": 144,
-        "Tech4Impact-21-22": 65 
-    },
-    "commit_count_per_repo_user_owner": {
-        "AurelliaChristie": 200,
-        "onlyphantom": 175,
-        ...
-    }
-}
-
-// contribution (issues and pull requests)
-{
-    "incomplete_issue_results": false,
-    "incomplete_pr_results": false,
-    "inference_from_issue_count": 2,
-    "inference_from_pr_count": 151,
-    "merged_pr_count": 108,
-    "self_contribution_to_external": {
-        "onlyphantom": 109,
-        "supertypeai": 67,
-        ...
-    },
-    // incoming contribution count (commits and pull requests from other users)
-    // only based on the top and latest 10 repositories
-    "external_contribution_to_self": {
-        "geraldbryan": 42
-    }
+    "contribution_count": 791,
+    "weekly_average_contribution": 5.774,
+    "contribution_count_per_day": {
+      "Wed": [ 101, 155 ], // the first value represents the contributions count in the last 12 months, while the second value represents the contributions count of all time
+      "Thu": [ 74, 163 ],
+      "Fri": [ 65, 180 ],
+      "Mon": [ 43, 92 ],
+      "Tue": [ 43, 104 ],
+      "Sun": [ 10, 51 ],
+      "Sat": [ 6, 46 ]
+   },
+   "contribution_count_per_month": {
+      "Mar": [ 119, 124 ], // the first value represents the contributions count in the last 12 months, while the second value represents the contributions count of all time
+      "Feb": [ 88, 88 ],
+      "Aug": [ 31, 37 ],
+      "Oct": [ 24, 159 ],
+      "Sep": [ 19, 73 ],
+      "Jul": [ 19, 47 ],
+      "Jun": [ 18, 18 ],
+      "Nov": [ 15, 74 ],
+      "Jan": [ 6, 134 ],
+      "Dec": [ 3, 37 ],
+      "Apr": [ 0, 0 ],
+      "May": [ 0, 0 ]
+   },
+    // the following 4 properties are inferred from the top 100 repos per year based on the total contributions count
+   "contribution_count_per_owned_repo": {
+      "BeautIndonesia": 84,
+      "TWO": 52,
+      "Skilvul-Tech4impact": 34,
+      "Ad-Fatigued-List-Generator": 32,
+      "Inventory-Management": 15,
+      "21_JSIntermediate_Code_Challenge": 15,
+      "Skilvul-Git-Second-Assignment": 14,
+      "Learning-Django": 9,
+      "Statistics-and-Microsoft-Excel-101": 7,
+      "Using-R-for-Time-Series-Stock-Analysis": 5,
+      "Multivariate-Analysis-McD-and-KFC-Nutrition-Facts": 5,
+      "cryptocurrency": 4,
+      "AurelliaChristie": 3,
+      "express-heroku-todolist": 2,
+      "dashboard-training": 2,
+      "Documentations": 2,
+      "supertype-fellowship": 1
+   },
+   "contribution_count_per_other_repo": [
+      {
+         "name": "generations-frontend",
+         "owner": "onlyphantom",
+         "html_url": "https://github.com/onlyphantom/generations-frontend",
+         "description": "Front end for Fellowship by @supertypeai",
+         "top_language": "javascript",
+         "contributions_count": 176
+      },
+      {
+         "name": "CookInd",
+         "owner": "Tech4Impact-21-22",
+         ...
+      },
+      ...
+   ],
+   "contribution_count_per_repo_org_owner": {
+      "Tech4Impact-21-22": 124,
+      "supertypeai": 107,
+      "olahdata-ai": 2,
+      "impactbyte": 1,
+      "supabase": 1
+   },
+   "contribution_count_per_repo_user_owner": {
+      "AurelliaChristie": 286,
+      "onlyphantom": 215,
+      "Lathh": 18,
+      "vccalvin33": 9
+   },
+   // incoming contribution count (commits and pull requests from other users)
+   // only based on the top and latest 10 repositories
+   "external_contribution_to_top_10_repo": { "geraldbryan": 42 }
 }
 
 // bio

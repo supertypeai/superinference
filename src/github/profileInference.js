@@ -26,9 +26,10 @@ const profileInference = async (githubHandle, token = null) => {
     bio,
     followers,
     following,
+    created_at,
   } = data;
 
-  return {
+  const profile = {
     login,
     name,
     company,
@@ -42,6 +43,8 @@ const profileInference = async (githubHandle, token = null) => {
     followers,
     following,
   };
+
+  return { profile, created_at };
 };
 
 export default profileInference;
