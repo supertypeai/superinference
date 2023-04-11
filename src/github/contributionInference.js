@@ -5,6 +5,7 @@
  * @param {string} token - Github access token to increase API rate limit and access private repositories.
  * @param {string} createdProfileDate - The user's Github profile creation date (from `profileInference()`).
  * @param {Object} originalRepo - Original repository data (from `repositoryInference()`).
+ * @param {boolean} [include_private=false] - Flag to include private repositories in the statistics. Default is false.
  *
  * @returns {Promise<Object>} A Promise that resolves with an object containing information about the user's contribution.
  * @property {number} contribution_count: The total number of contributions all time.
@@ -28,7 +29,8 @@ const contributionInference = async (
   githubHandle,
   token,
   createdProfileDate,
-  originalRepo
+  originalRepo,
+  include_private = false
 ) => {
   // return null if no token is provided
   if (!token) {
@@ -79,6 +81,7 @@ const contributionInference = async (
         login
         }
     }
+    isPrivate
   } contributions {
     totalCount
   }`;
@@ -151,6 +154,7 @@ const contributionInference = async (
           ? repository.languages.nodes[0].name.toLowerCase().replace(/ /g, "-")
           : null,
         contributions_count: contributions.totalCount,
+        is_private: repository.isPrivate,
       };
     };
     const newCommits =
@@ -185,6 +189,12 @@ const contributionInference = async (
     ]);
   }
 
+  if (!include_private) {
+    contributionsPerRepo = contributionsPerRepo.filter(
+      (c) => c.is_private === false
+    );
+  }
+
   // count number of contributions per day and month
   const oneYearAgo = new Date().setFullYear(new Date().getFullYear() - 1);
   const count = contributionsPerDay.reduce(
@@ -216,10 +226,12 @@ const contributionInference = async (
         result[repoType][c.name] =
           (result[repoType][c.name] || 0) + c.contributions_count;
       } else {
-        const index = result[repoType].findIndex((obj) => obj.name === c.name);
+        const index = result[repoType].findIndex(
+          (obj) => obj.html_url === c.html_url
+        );
 
         if (index === -1) {
-          const { owner_type, ...data } = c;
+          const { owner_type, is_private, ...data } = c;
           result[repoType].push(data);
         } else {
           result[repoType][index] = {
