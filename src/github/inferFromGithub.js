@@ -49,7 +49,8 @@ const inferFromGithub = async ({
     githubHandle,
     token,
     created_at,
-    originalRepo
+    originalRepo,
+    include_private
   );
 
   return {

@@ -37,10 +37,10 @@ This will install `superinference` from npm and add it to your `package.json` fi
 There is nothing magic here. Superinference is just a wrapper around the social media APIs and so it's usage is very simple. Here is how you would extract and infer attributes from a person using he/her GitHub and Dev.to usernames:
 
 ```js
-import { inferFromDevto, inferFromGithub } from "superinference";
+import { inferFromDevto, inferFromGithub, inferFromGithubRepo } from "superinference";
 
 // using then
-let profile, skill, stats, contribution, bio;
+let profile, skill, stats, contribution, bio, repo;
 inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     // do something with the data, such as setting states or updating UI
     ({ profile, skill, stats, contribution } = data);
@@ -48,12 +48,24 @@ inferFromGithub({ githubHandle:"AurelliaChristie" }).then((data) => {
     
 inferFromDevto({ devtoHandle:"onlyphantom" }).then((data) => {
     ({ bio } = data);
-})
+});
+
+inferFromGithubRepo({
+  repositoryName: "generations-frontend",
+  repositoryOwner: "onlyphantom",
+}).then((data) => {
+    repo = data;
+});
 
 // using await 
 const { profile, skill, stats, contribution } = await inferFromGithub({ githubHandle:"AurelliaChristie" });
     
 const bio = await inferFromDevto({ devtoHandle:"onlyphantom" });
+
+const repo = await inferFromGithubRepo({
+  repositoryName: "generations-frontend",
+  repositoryOwner: "onlyphantom",
+});
 ```
 
 Here is the sample result for each of `profile`, `skill`, `stats`, `contribution`, and `bio` created from the two function calls above:
@@ -205,7 +217,6 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `contribution
 
 // bio
 {
-    ...,
     "username": "onlyphantom",
     "name": "Samuel Chan",
     "twitter_username": "_onlyphantom",
@@ -215,6 +226,67 @@ Here is the sample result for each of `profile`, `skill`, `stats`, `contribution
     "website_url": "https://www.youtube.com/samuelchan",
     "joined_at": "Jul  3, 2019",
     "profile_image": "https://res.cloudinary.com/practicaldev/image/fetch/...
+}
+
+// repo
+{
+   "name": "generations-frontend",
+   "html_url": "https://github.com/onlyphantom/generations-frontend",
+   "description": "Front end for Fellowship by @supertypeai",
+   "owner_username": "onlyphantom",
+   "owner_html_url": "https://github.com/onlyphantom",
+   "topic": [],
+   "visibility": "public",
+   "created_at": "2022-05-10T15:58:48Z",
+   "last_pushed_at": "2023-03-20T10:54:51Z",
+   "top_language": "JavaScript",
+   "languages_percentage": [
+      {
+         "JavaScript": 0.966
+      },
+      {
+         "CSS": 0.018
+      },
+      {
+         "HTML": 0.016
+      }
+   ],
+   "stargazers_count": 3,
+   "forks_count": 2,
+   "watchers_count": 3,
+   "subscribers_count": 2,
+   "open_issues_count": 0,
+   "incomplete_contribution_results": false,
+   "contributors_count": 2,
+   "contributions_count": 303,
+   "contributions": [
+      {
+         "contributor_username": "onlyphantom",
+         "contributor_html_url": "https://github.com/onlyphantom",
+         "contributor_repos_url": "https://api.github.com/users/onlyphantom/repos",
+         "contributor_type": "User",
+         "contributions": 183,
+         "contributions_percentage": 0.604
+      },
+      {
+         "contributor_username": "AurelliaChristie",
+         "contributor_html_url": "https://github.com/AurelliaChristie",
+         "contributor_repos_url": "https://api.github.com/users/AurelliaChristie/repos",
+         "contributor_type": "User",
+         "contributions": 120,
+         "contributions_percentage": 0.396
+      }
+   ],
+   "incomplete_event_results": false,
+   "events_count": {
+      "PushEvent": 145,
+      "PullRequestEvent": 70,
+      "IssueCommentEvent": 34,
+      "GollumEvent": 1,
+      "ForkEvent": 1,
+      "CreateEvent": 1,
+      "DeleteEvent": 1
+   }
 }
 ```
 
