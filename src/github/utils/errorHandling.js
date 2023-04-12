@@ -42,10 +42,6 @@ const errorHandling = async (response, token, graphql = false) => {
         "API rate limit exceeded, please provide an access token to increase rate limit."
       );
     }
-  } else if (response.status === 404) {
-    throw new Error(
-      "The requested data is unavailable. Please ensure that you have entered the correct params and try again."
-    );
   }
 };
 
